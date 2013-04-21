@@ -1,8 +1,8 @@
-(function (global, $) {
+(function Transformer(global, $) {
 	'use strict';
 
-	if (typeof Mandox !== 'undefined') {
-		eval('uate')('tranformer.js');
+	if (typeof mandox !== 'undefined') {
+		eval(uate)('tranformer.js');
 	}
 
 	// === markers ===
@@ -224,6 +224,9 @@
 		return 'matrix(' + [cos, sin, -sin, cos, 0, 0].join(',') + ')';
 	}
 
+	/**
+	 * Start rotation
+	 */
 	function start($event) {
 		if (!state.rotating) {
 			$boundingbox.show();
