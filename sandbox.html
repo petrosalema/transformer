@@ -1,0 +1,66 @@
+<!doctype html>
+<head>
+	<title>Transformer &bull; sandbox</title>
+	<meta charset="UTF-8">
+	<link href="transformer.css" type="text/css" rel="stylesheet" />
+	<style> 
+		body {
+			padding: 0;
+			margin: 0;
+		}
+		.box {
+			border: 2px solid rgba(0,0,0,0.8);
+			position: absolute;
+			text-align: left;
+			word-wrap: break-word;
+			-webkit-user-modify: read-write;
+			-webkit-nbsp-mode: space;
+			-webkit-line-break: after-white-space	
+		}
+	</style>
+</head>
+<body>
+	SHIFT + DRAG
+	<script src="jquery.js"></script>
+	<!-- script src="jquery-ui.js"></script -->
+	<script src="transformer.js"></script>
+	<script>
+		(function ($) {
+			var creating = null;
+
+			function createBox(css) {
+				Transformer.disableSelection($('body'));
+				var $box = $('<div class="box">This way up</div>').appendTo('body');
+				$box.css('position', 'absolute').css(css);
+				return {
+					$box : $box,
+					left : css.left,
+					top  : css.top
+				};
+			}
+
+			$(document).on('mousemove', function onmousemove($event) {
+				if (creating) {
+					creating.$box.width($event.pageX - creating.left);
+					creating.$box.height($event.pageY - creating.top);
+				}
+			}).on('mouseup', function onmouseup($event) {
+				Transformer.enableSelection($('body'));
+				if (creating) {
+					creating = null;
+				}
+				Transformer.stop($event);
+			}).on('mousedown', function onmousedown($event) {
+				if ($event.shiftKey) {
+					creating = createBox({
+						left: $event.clientX,
+						top: $event.clientY,
+					});
+				}
+			}).on('mousedown', '.box', function ($event) {
+				Transformer.start($event);
+			});
+		}(jQuery));
+	</script>
+</body>
+</html>
