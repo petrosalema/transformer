@@ -13,14 +13,18 @@
 			position: absolute;
 			text-align: left;
 			word-wrap: break-word;
-			-webkit-user-modify: read-write;
+			/* -webkit-user-modify: read-write; */
 			-webkit-nbsp-mode: space;
 			-webkit-line-break: after-white-space	
 		}
 	</style>
 </head>
 <body>
-	SHIFT + DRAG
+	<pre>
+	   New box : SHIFT; DRAG
+	Rotate box : CTRL; DRAG
+	</pre>
+
 	<script src="vendor/jquery.js"></script>
 	<!-- script src="vendor/jquery-ui.js"></script -->
 	<script src="vendor/mandox/esprima.js"></script>
@@ -29,10 +33,10 @@
 	<script src="transformer.js"></script>
 	<script>
 		(function ($) {
+			var rotation = null;
 			var creating = null;
 
 			function createBox(css) {
-				Transformer.disableSelection($('body'));
 				var $box = $('<div class="box">This way up</div>').appendTo('body');
 				$box.css('position', 'absolute').css(css);
 				return {
@@ -47,21 +51,38 @@
 					creating.$box.width($event.pageX - creating.left);
 					creating.$box.height($event.pageY - creating.top);
 				}
+				if (rotation) {
+					Transformer.updateRotation(
+						rotation,
+						$event.pageX,
+						$event.pageY
+					);
+				}
+			}).on('mousedown', function onmousedown($event) {
+				if ($event.shiftKey) {
+					Transformer.disableSelection($('body'));
+					creating = createBox({
+						left: $event.pageX,
+						top: $event.pageY,
+					});
+				}
 			}).on('mouseup', function onmouseup($event) {
 				Transformer.enableSelection($('body'));
+				if (rotation) {
+					Transformer.endRotation(rotation);
+					rotation = null;
+				}
 				if (creating) {
 					creating = null;
 				}
-				Transformer.stop($event);
-			}).on('mousedown', function onmousedown($event) {
-				if ($event.shiftKey) {
-					creating = createBox({
-						left: $event.clientX,
-						top: $event.clientY,
-					});
+			}).on('mousedown', '.box', function onboxmousedown($event) {
+				if ($event.ctrlKey) {
+					rotation = Transformer.startRotation(
+						$event.target,
+						$event.pageX,
+						$event.pageY
+					);
 				}
-			}).on('mousedown', '.box', function ($event) {
-				Transformer.start($event);
 			});
 		}(jQuery));
 	</script>

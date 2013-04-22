@@ -1,3 +1,9 @@
+/**
+ * ___ __          __ __ __  __      __ __
+ *  | |__) /\ |\ |(_ |_ /  \|__)|\/||_ |__)
+ *  | | \ /--\| \|__)|  \__/| \ |  ||__| \
+ * ---------------------------------------->
+ */
 (function Transformer(global, $) {
 	'use strict';
 
@@ -5,9 +11,35 @@
 		eval(uate)('tranformer.js');
 	}
 
-	// === markers ===
+	function enableSelection($element) {
+		$element.each(function () {
+			$(this).removeAttr('unselectable', 'on').css({
+				'-webkit-user-select': 'all',
+				   '-moz-user-select': 'all',
+				        'user-select': 'all'
+			}).each(function () {
+				this.onselectstart = null;
+			});
+		});
+	}
 
-	// https://en.wikipedia.org/wiki/Rotation_(mathematics)
+	function disableSelection($element) {
+		$element.each(function () {
+			$(this).attr('unselectable', 'on').css({
+				'-webkit-user-select': 'none',
+				   '-moz-user-select': 'none',
+				        'user-select': 'none'
+			}).each(function () {
+				this.onselectstart = function () { return false; };
+			});
+		});
+	}
+
+	/**
+	 * Rotates a vector by the given radian angle.
+	 *
+	 * Reference: https://en.wikipedia.org/wiki/Rotation_(mathematics)
+	 */
 	function rotateVector(vec, theta) {
 		var cos = Math.cos(theta);
 		var sin = Math.sin(theta);
@@ -17,6 +49,9 @@
 		];
 	}
 
+	/**
+	 * Adds the given vectors and returns a new copy.
+	 */
 	function translateVector(vec1, vec2) {
 		return [vec1[0] + vec2[0], vec1[1] + vec2[1]];
 	}
@@ -32,7 +67,10 @@
 		se : $('<div class="transformer-marker" id="transformer-marker-se"><div></div></div>').appendTo('body')
 	};
 
-	function selectMarkers(markers) {
+	/**
+	 * Creates a jQuery collection of all markers in the given set.
+	 */
+	function collectMarkers(markers) {
 		var $markers = $();
 		var name;
 		for (name in markers) {
@@ -43,9 +81,12 @@
 		return $markers;
 	}
 
-	var $markers = selectMarkers(markers);
+	var $markers = collectMarkers(markers);
 
-	function setMarkers($element, origin, angle) {
+	/**
+	 * Orientates and shows the given set of markers around an element.
+	 */
+	function setMarkers(markers, $element, origin, angle) {
 		var width = $element.width();
 		var height = $element.height();
 
@@ -80,70 +121,13 @@
 				markers[name].css('left', pos[0]).css('top', pos[1]);
 			}
 		}
-	}
 
-	/*
-	markers.$n.draggable('option', 'axis', 'y');
-	markers.$s.draggable('option', 'axis', 'y');
-	markers.$w.draggable('option', 'axis', 'x');
-	markers.$e.draggable('option', 'axis', 'x');
-	*/
-
-	// === /markers ===
-
-	var state = {
-
-		/**
-		 * The element in rotation.
-		 */
-		$element: null,
-
-		/**
-		 * Tangent point.  Dragging point.
-		 */
-		anchor: null,
-
-		/**
-		 * Pivot point.  Will always be at the center of the rotated element.
-		 */
-		pivot: null,
-
-		/**
-		 * Angle at start of rotation.
-		 */
-		start: 0,
-
-		/**
-		 * Whether or not we are in rotation mode.
-		 */
-		rotating: false
-	};
-
-	function enableSelection($element) {
-		$element.each(function () {
-			$(this).removeAttr('unselectable', 'on').css({
-				'-webkit-user-select': 'all',
-				   '-moz-user-select': 'all',
-				        'user-select': 'all'
-			}).each(function () {
-				this.onselectstart = null;
-			});
-		});
-	}
-
-	function disableSelection($element) {
-		$element.each(function () {
-			$(this).attr('unselectable', 'on').css({
-				'-webkit-user-select': 'none',
-				   '-moz-user-select': 'none',
-				        'user-select': 'none'
-			}).each(function () {
-				this.onselectstart = function () { return false; };
-			});
-		});
+		$markers.show();
 	}
 
 	/**
+	 * Converts degrees into radians.
+	 *
 	 * Reference: https://en.wikipedia.org/wiki/Radian
 	 */
 	function toRad(degrees) {
@@ -153,11 +137,14 @@
 	var MAX_ANGLE = toRad(360);
 	var HALF_ANGLE = toRad(180);
 	var RIGHT_ANGLE = toRad(90);
+	var CSS_TRANSFORM_PROPERTY_NAME = '-webkit-transform';
+	var MUNGED_ATTRIBUTE = 'data-' + Math.random().toString(16).substr(2)
+	                     + '-rotation';
 
 	/**
-	 * Reference: https://en.wikipedia.org/wiki/atan2
-	 *
 	 * Calculate the angle between (0, 0) and (x, y) in radians.
+	 *
+	 * Reference: https://en.wikipedia.org/wiki/atan2
 	 *
 	 * atan2(y, x) is the angle in radians between the positive x-axis of a
 	 * plane and the point given by the coordinates (x, y) on it. The angle is
@@ -170,22 +157,20 @@
 		return Math.atan2(y, x);
 	}
 
-	function elementRotation($element) {
-		return parseFloat($element.attr('__rotation__')) || 0;
+	function getRotation($element) {
+		return parseFloat($element.attr(MUNGED_ATTRIBUTE)) || 0;
 	}
 
 	var $boundingbox = $('<div id="transformer-boundingbox">').appendTo('body');
 	var $pivot = $('<div id="transformer-pivot">').appendTo('body');
 
 	/**
-	 * Reference: http://www.codalicio.us/2011/01/how-to-determine-bounding-rectangle-of.html
+	 * Calculate the height and width of the bounding box for the given
+	 * orientation.
 	 *
-	 * SOHCAHTOA:
-	 * Sin(q) = Opposite / Hypotenuse
-	 * Cos(q) = Adjacent / Hypotenuse 
-	 * Tan(q) = Opposite / Adjacent
+	 * Reference: http://www.codalicio.us/2011/01/how-to-determine-bounding-rectangle-of.html
 	 */
-	function boundingBox(w, h, angle) {
+	function calculateBoundingBox(w, h, angle) {
 		if (angle > HALF_ANGLE) {
 			angle -= HALF_ANGLE;
 		}
@@ -195,26 +180,26 @@
 			w = h;
 			h = originalHeight;
 		}
-		return [
+		return [(
 			// a = cos(q) * h
-			(
-				(Math.cos(RIGHT_ANGLE - angle) * h)
-				+
-				(Math.cos(angle) * w)
-			),
+			(Math.cos(RIGHT_ANGLE - angle) * h)
+			+
+			(Math.cos(angle) * w)
+		), (
 			// o = sin(q) * h
-			(
-				(Math.sin(RIGHT_ANGLE - angle) * h)
-				+
-				(Math.sin(angle) * w)
-			)
-		];
+			(Math.sin(RIGHT_ANGLE - angle) * h)
+			+
+			(Math.sin(angle) * w)
+		)];
 	}
 
-	function pivot($element, angle) {
-		var box = boundingBox($element.width(), $element.height(), angle);
+	function calculateOrigin($element, angle) {
+		var box = calculateBoundingBox(
+			$element.width(),
+			$element.height(),
+			angle
+		);
 		var offset = $element.offset();
-		$boundingbox.offset(offset).css('width', box[0]).css('height', box[1]);
 		return [offset.left + (box[0] / 2), offset.top + (box[1] / 2)];
 	}
 
@@ -224,81 +209,105 @@
 		return 'matrix(' + [cos, sin, -sin, cos, 0, 0].join(',') + ')';
 	}
 
-	/**
-	 * Start rotation
-	 */
-	function start($event) {
-		if (!state.rotating) {
-			$boundingbox.show();
-			$markers.show();
-
-			state.$element = $($event.target);
-			state.rotating = true;
-			var rotation = elementRotation(state.$element);
-			state.pivot = pivot(state.$element, rotation);
-			state.anchor = [$event.clientX, $event.clientY];
-			state.start = rotation
-			            - calculateAngle(state.anchor[0] - state.pivot[0], 0);
-
-			disableSelection($('body'));
-
-			$pivot.show().css('left', state.pivot[0]).css('top', state.pivot[1]);
-		}
-	}
-
-	function stop($event) {
-		if (state.rotating) {
-			state.rotating = false;
-			state.$element.attr('__rotation__', state.current);
-
-			enableSelection($('body'));
-
-			$boundingbox.hide();
-			$markers.hide();
-			$pivot.hide();
-		}
-	}
-
-	function cicle(radians) {
+	function normalizeAngle(radians) {
 		if (radians < 0) {
 			radians = MAX_ANGLE + radians;
 		}
 		return (radians > MAX_ANGLE) ? radians - MAX_ANGLE : radians;
 	}
 
-	function clear($element) {
-		$element.removeAttr('__rotation__');
+	function showHelpers(pivot, offset, $pivot, $boundingbox) {
+		$pivot.show().css('left', pivot[0]).css('top', pivot[1]);
+		$boundingbox.show().offset(offset)
+		            .css('width', (pivot[0] - offset.left) * 2)
+		            .css('height', (pivot[1] - offset.top) * 2);
 	}
 
-	function rotateElement($event) {
-		if (state.rotating) {
-			state.current = cicle(state.start + calculateAngle(
-				$event.clientX - state.pivot[0],
-				$event.clientY - state.anchor[1]
-			));
-			state.$element.css(
-				'-webkit-transform',
-				calculateTransformation(state.current)
-			);
-			setMarkers(state.$element, state.pivot, state.current);
-			pivot(state.$element, state.current);
-		}
+	/**
+	 * Cleans an element of transformation annotations.
+	 */
+	function clearAttributes($element) {
+		$element.removeAttr(MUNGED_ATTRIBUTE);
 	}
 
-	$(document).on('mousemove', function onmousemove($event) {
-		if (state.rotating) {
-			rotateElement($event);
+	/**
+	 * Initialize rotation for the given element at poing (x, y).
+	 */
+	function startRotation(element, x, y) {
+		disableSelection($('body'));
+
+		var $element = $(element);
+		var angle = getRotation($element);
+		var pivot = calculateOrigin($element, angle);
+		var anchor = [x, y];
+		var start = angle - calculateAngle(anchor[0] - pivot[0], 0);
+
+		showHelpers(pivot, $element.offset(), $pivot, $boundingbox);
+		setMarkers(markers, $element, pivot, start);
+
+		return {
+			$element : $element,
+			pivot    : pivot,
+			anchor   : anchor,
+			start    : start,
+			angle    : start
+		};
+	}
+
+	/**
+	 * Saves the current rotation angle as an attribute on the rotated element
+	 * and hides boundingbox, pivot, and markers.
+	 */
+	function endRotation(rotation) {
+		if (rotation) {
+			rotation.$element.attr(MUNGED_ATTRIBUTE, rotation.angle);
 		}
-	});
+		$boundingbox.hide();
+		$markers.hide();
+		$pivot.hide();
+	}
+
+	/**
+	 * Update the rotation according to the new coordinates (x, y).
+	 */
+	function updateRotation(rotation, x, y) {
+		var angle = normalizeAngle(rotation.start + calculateAngle(
+			x - rotation.pivot[0],
+			y - rotation.anchor[1]
+		));
+
+		rotation.$element.css(
+			CSS_TRANSFORM_PROPERTY_NAME,
+			calculateTransformation(angle)
+		);
+
+		showHelpers(
+			rotation.pivot,
+			rotation.$element.offset(),
+			$pivot,
+			$boundingbox
+		);
+
+		setMarkers(markers, rotation.$element, rotation.pivot, angle);
+
+		rotation.angle = angle;
+	}
 
 	$markers.hide();
 	$pivot.hide();
 	$boundingbox.hide();
 
+	/**
+	 * ___ __          __ __ __  __      __ __
+	 *  | |__) /\ |\ |(_ |_ /  \|__)|\/||_ |__)
+	 *  | | \ /--\| \|__)|  \__/| \ |  ||__| \
+	 * ---------------------------------------->
+	 */
 	global.Transformer = {
-		start            : start,
-		stop             : stop,
-		clear            : clear,
+		startRotation    : startRotation,
+		endRotation      : endRotation,
+		updateRotation   : updateRotation,
+		clearAttributes  : clearAttributes,
 		enableSelection  : enableSelection,
 		disableSelection : disableSelection
 	};
