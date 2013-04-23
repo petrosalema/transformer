@@ -90,14 +90,14 @@
 		var width = $element.outerWidth();
 		var height = $element.outerHeight();
 
-		var n  = [0, height / 2];
-		var s  = [0,        [1]];
-		var e  = [width / 2,  0];
-		var w  = [-e[0],      0];
-		var nw = [w[0],    n[1]];
-		var ne = [e[0],    n[1]];
-		var sw = [w[0],    s[1]];
-		var se = [e[0],    s[1]];
+		var n  = [0, -height / 2];
+		var s  = [0,       -n[1]];
+		var e  = [width / 2,   0];
+		var w  = [-e[0],       0];
+		var nw = [w[0],     n[1]];
+		var ne = [e[0],     n[1]];
+		var sw = [w[0],     s[1]];
+		var se = [e[0],     s[1]];
 
 		var cardinals = {
 			n  : n,
