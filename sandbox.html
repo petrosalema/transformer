@@ -9,9 +9,10 @@
 			margin: 0;
 		}
 		.box {
-			border: 2px solid rgba(0,0,0,0.8);
+			overflow: hidden;
 			position: absolute;
-			text-align: left;
+			text-align: center;
+			border: 1px solid rgba(0,0,0,0.2);
 			word-wrap: break-word;
 			/* -webkit-user-modify: read-write; */
 			-webkit-nbsp-mode: space;
@@ -37,7 +38,7 @@
 			var creating = null;
 
 			function createBox(css) {
-				var $box = $('<div class="box">This way up</div>').appendTo('body');
+				var $box = $('<div class="box">⇡</div>').appendTo('body');
 				$box.css('position', 'absolute').css(css);
 				return {
 					$box : $box,
@@ -48,8 +49,11 @@
 
 			$(document).on('mousemove', function onmousemove($event) {
 				if (creating) {
-					creating.$box.width($event.pageX - creating.left);
-					creating.$box.height($event.pageY - creating.top);
+					creating.$box.css({
+						width: $event.pageX - creating.left,
+					    height: $event.pageY - creating.top,
+						lineHeight: (creating.$box.height() / 2) + 'px'
+					});
 				}
 				if (rotation) {
 					Transformer.updateRotation(

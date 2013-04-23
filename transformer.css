@@ -12,57 +12,56 @@
 }
 .transformer-marker>div {
 	position: relative;
-	width: 8px;
-	height: 8px;
+	width: 6px;
+	height: 6px;
 	background: #fff;
-	border: 1px solid #333;
+	border: 1px solid rgba(0,0,0,0.5);
 	border-radius: 8px;
 }
 #transformer-marker-nw>div {
 	background: red;
-	top: -4px;
-	left: -4px;
-	_height: 400px;
+	top: -3px;
+	left: -3px;
 }
 #transformer-marker-sw>div {
 	background: blue;
-	bottom: 4px;
-	left: -4px;
+	bottom: 3px;
+	left: -3px;
 }
 #transformer-marker-ne>div {
 	background: green;
-	top: -4px;
-	right: 4px;
+	top: -3px;
+	right: 3px;
 }
 #transformer-marker-se>div {
 	background: yellow;
-	bottom: 4px;
-	right: 4px;
+	bottom: 3px;
+	right: 3px;
 }
 #transformer-marker-n>div{
-	top: -4px;
-	left: -4px;
+	top: -3px;
+	left: -3px;
 }
 #transformer-marker-s>div{
-	bottom: 4px;
-	left: -4px;
+	bottom: 3px;
+	left: -3px;
 }
 #transformer-marker-w>div{
-	top: -4px;
-	left: -4px;
+	top: -3px;
+	left: -3px;
 }
 #transformer-marker-e>div{
-	top: -4px;
-	right: 4px;
+	top: -3px;
+	right: 3px;
 }
 #transformer-pivot {
 	position: absolute;
 	background: rgba(0, 0, 0, 0.05);
-	border-radius: 5px;
-	width: 8px;
-	height: 8px;
+	border-radius: 3px;
+	width: 6px;
+	height: 6px;
 }
 #transformer-boundingbox {
 	position: absolute;
-	outline: 2px solid rgba(0, 0, 0, 0.05);
+	outline: 1px dashed rgba(0, 0, 0, 0.1);
 }
