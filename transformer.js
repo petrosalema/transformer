@@ -3,6 +3,11 @@
  *  | |__) /\ |\ |(_ |_ /  \|__)|\/||_ |__)
  *  | | \ /--\| \|__)|  \__/| \ |  ||__| \
  * ---------------------------------------->
+ *
+ * TODO:
+ * vendor prefixes
+ * moving
+ * resizing
  */
 (function Transformer(global, $) {
 	'use strict';
@@ -67,10 +72,7 @@
 		se : $('<div class="transformer-marker" id="transformer-marker-se"><div></div></div>').appendTo('body')
 	};
 
-	/**
-	 * Creates a jQuery collection of all markers in the given set.
-	 */
-	function collectMarkers(markers) {
+	var $markers = (function collectMarkers(markers) {
 		var $markers = $();
 		var name;
 		for (name in markers) {
@@ -79,16 +81,16 @@
 			}
 		}
 		return $markers;
-	}
-
-	var $markers = collectMarkers(markers);
+	}(markers));
+	var $boundingbox = $('<div id="transformer-boundingbox">').appendTo('body');
+	var $pivot = $('<div id="transformer-pivot">').appendTo('body');
 
 	/**
 	 * Orientates and shows the given set of markers around an element.
 	 */
-	function setMarkers(markers, $element, origin, angle) {
-		var width = $element.outerWidth();
-		var height = $element.outerHeight();
+	function showMarkers(rotation) {
+		var width = rotation.$element.outerWidth();
+		var height = rotation.$element.outerHeight();
 
 		var n  = [0, -height / 2];
 		var s  = [0,       -n[1]];
@@ -115,15 +117,29 @@
 		for (name in cardinals) {
 			if (cardinals.hasOwnProperty(name)) {
 				pos = translateVector(
-					rotateVector(cardinals[name], angle),
-					origin
+					rotateVector(cardinals[name], rotation.angle),
+					rotation.pivot
 				);
-				markers[name].css('left', pos[0]).css('top', pos[1]);
+				markers[name].css('left', pos[0]).css('top', pos[1]).show();
 			}
 		}
 
-		$markers.show();
+		var offset = rotation.$element.offset();
+
+		$boundingbox.show().offset(offset)
+		            .css('width', (rotation.pivot[0] - offset.left) * 2)
+		            .css('height', (rotation.pivot[1] - offset.top) * 2);
+
+		$pivot.show()
+		      .css('left', rotation.pivot[0])
+		      .css('top', rotation.pivot[1]);
 	}
+
+	(function hideMarkers() {
+		$pivot.hide();
+		$markers.hide();
+		$boundingbox.hide();
+	}());
 
 	/**
 	 * Converts degrees into radians.
@@ -160,9 +176,6 @@
 	function getRotation($element) {
 		return parseFloat($element.attr(MUNGED_ATTRIBUTE)) || 0;
 	}
-
-	var $boundingbox = $('<div id="transformer-boundingbox">').appendTo('body');
-	var $pivot = $('<div id="transformer-pivot">').appendTo('body');
 
 	/**
 	 * Calculate the height and width of the bounding box for the given
@@ -216,13 +229,6 @@
 		return (radians > MAX_ANGLE) ? radians - MAX_ANGLE : radians;
 	}
 
-	function showHelpers(pivot, offset, $pivot, $boundingbox) {
-		$pivot.show().css('left', pivot[0]).css('top', pivot[1]);
-		$boundingbox.show().offset(offset)
-		            .css('width', (pivot[0] - offset.left) * 2)
-		            .css('height', (pivot[1] - offset.top) * 2);
-	}
-
 	/**
 	 * Cleans an element of transformation annotations.
 	 */
@@ -242,16 +248,17 @@
 		var anchor = [x, y];
 		var start = angle - calculateAngle(anchor[0] - pivot[0], 0);
 
-		showHelpers(pivot, $element.offset(), $pivot, $boundingbox);
-		setMarkers(markers, $element, pivot, start);
-
-		return {
+		var rotation = {
 			$element : $element,
 			pivot    : pivot,
 			anchor   : anchor,
 			start    : start,
 			angle    : start
 		};
+
+		showMarkers(rotation, $pivot, $boundingbox, markers);
+
+		return rotation;
 	}
 
 	/**
@@ -262,40 +269,22 @@
 		if (rotation) {
 			rotation.$element.attr(MUNGED_ATTRIBUTE, rotation.angle);
 		}
-		$boundingbox.hide();
-		$markers.hide();
-		$pivot.hide();
 	}
 
 	/**
 	 * Update the rotation according to the new coordinates (x, y).
 	 */
 	function updateRotation(rotation, x, y) {
-		var angle = normalizeAngle(rotation.start + calculateAngle(
+		rotation.angle = normalizeAngle(rotation.start + calculateAngle(
 			x - rotation.pivot[0],
 			y - rotation.anchor[1]
 		));
-
 		rotation.$element.css(
 			CSS_TRANSFORM_PROPERTY_NAME,
-			calculateTransformation(angle)
+			calculateTransformation(rotation.angle)
 		);
-
-		showHelpers(
-			rotation.pivot,
-			rotation.$element.offset(),
-			$pivot,
-			$boundingbox
-		);
-
-		setMarkers(markers, rotation.$element, rotation.pivot, angle);
-
-		rotation.angle = angle;
+		showMarkers(rotation, $pivot, $boundingbox, markers);
 	}
-
-	$markers.hide();
-	$pivot.hide();
-	$boundingbox.hide();
 
 	/**
 	 * ___ __          __ __ __  __      __ __
