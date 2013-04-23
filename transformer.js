@@ -15,8 +15,8 @@
 		$element.each(function () {
 			$(this).removeAttr('unselectable', 'on').css({
 				'-webkit-user-select': 'all',
-				   '-moz-user-select': 'all',
-				        'user-select': 'all'
+				'   -moz-user-select': 'all',
+				'        user-select': 'all'
 			}).each(function () {
 				this.onselectstart = null;
 			});
@@ -27,8 +27,8 @@
 		$element.each(function () {
 			$(this).attr('unselectable', 'on').css({
 				'-webkit-user-select': 'none',
-				   '-moz-user-select': 'none',
-				        'user-select': 'none'
+				'   -moz-user-select': 'none',
+				'        user-select': 'none'
 			}).each(function () {
 				this.onselectstart = function () { return false; };
 			});
@@ -87,17 +87,17 @@
 	 * Orientates and shows the given set of markers around an element.
 	 */
 	function setMarkers(markers, $element, origin, angle) {
-		var width = $element.width();
-		var height = $element.height();
+		var width = $element.outerWidth();
+		var height = $element.outerHeight();
 
-		var n  = [0,       -height/2];
-		var s  = [0,           -n[1]];
-		var e  = [width/2,         0];
-		var w  = [-e[0],           0];
-		var nw = [w[0],         n[1]];
-		var ne = [e[0],         n[1]];
-		var sw = [w[0],         s[1]];
-		var se = [e[0],         s[1]];
+		var n  = [0, height / 2];
+		var s  = [0,        [1]];
+		var e  = [width / 2,  0];
+		var w  = [-e[0],      0];
+		var nw = [w[0],    n[1]];
+		var ne = [e[0],    n[1]];
+		var sw = [w[0],    s[1]];
+		var se = [e[0],    s[1]];
 
 		var cardinals = {
 			n  : n,
@@ -195,8 +195,8 @@
 
 	function calculateOrigin($element, angle) {
 		var box = calculateBoundingBox(
-			$element.width(),
-			$element.height(),
+			$element.outerWidth(),
+			$element.outerHeight(),
 			angle
 		);
 		var offset = $element.offset();
