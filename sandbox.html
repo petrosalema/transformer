@@ -61,17 +61,18 @@
 						$event.pageX,
 						$event.pageY
 					);
+					console.log(Transformer.rotateCardinalDirection(rotation, 'n'));
 				}
 			}).on('mousedown', function onmousedown($event) {
 				if ($event.shiftKey) {
-					Transformer.disableSelection($('body'));
+					Transformer.disableSelection();
 					creating = createBox({
 						left: $event.pageX,
 						top: $event.pageY,
 					});
 				}
 			}).on('mouseup', function onmouseup($event) {
-				Transformer.enableSelection($('body'));
+				Transformer.enableSelection();
 				if (rotation) {
 					Transformer.endRotation(rotation);
 					rotation = null;

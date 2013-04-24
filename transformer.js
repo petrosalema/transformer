@@ -16,8 +16,24 @@
 		eval(uate)('tranformer.js');
 	}
 
+	/**
+	 * Converts degrees into radians.
+	 *
+	 * Reference: https://en.wikipedia.org/wiki/Radian
+	 */
+	function toRad(degrees) {
+		return degrees * (Math.PI / 180);
+	}
+
+	var MAX_ANGLE = toRad(360);
+	var HALF_ANGLE = toRad(180);
+	var RIGHT_ANGLE = toRad(90);
+	var CSS_TRANSFORM_PROPERTY_NAME = '-webkit-transform';
+	var MUNGED_ATTRIBUTE = 'data-' + Math.random().toString(16).substr(2)
+	                     + '-rotation';
+
 	function enableSelection($element) {
-		$element.each(function () {
+		($element || $('body')).each(function () {
 			$(this).removeAttr('unselectable', 'on').css({
 				'-webkit-user-select': 'all',
 				'   -moz-user-select': 'all',
@@ -29,7 +45,7 @@
 	}
 
 	function disableSelection($element) {
-		$element.each(function () {
+		($element || $('body')).each(function () {
 			$(this).attr('unselectable', 'on').css({
 				'-webkit-user-select': 'none',
 				'   -moz-user-select': 'none',
@@ -142,22 +158,6 @@
 	}());
 
 	/**
-	 * Converts degrees into radians.
-	 *
-	 * Reference: https://en.wikipedia.org/wiki/Radian
-	 */
-	function toRad(degrees) {
-		return degrees * (Math.PI / 180);
-	}
-
-	var MAX_ANGLE = toRad(360);
-	var HALF_ANGLE = toRad(180);
-	var RIGHT_ANGLE = toRad(90);
-	var CSS_TRANSFORM_PROPERTY_NAME = '-webkit-transform';
-	var MUNGED_ATTRIBUTE = 'data-' + Math.random().toString(16).substr(2)
-	                     + '-rotation';
-
-	/**
 	 * Calculate the angle between (0, 0) and (x, y) in radians.
 	 *
 	 * Reference: https://en.wikipedia.org/wiki/atan2
@@ -240,7 +240,7 @@
 	 * Initialize rotation for the given element at poing (x, y).
 	 */
 	function startRotation(element, x, y) {
-		disableSelection($('body'));
+		disableSelection();
 
 		var $element = $(element);
 		var angle = getRotation($element);
@@ -286,6 +286,105 @@
 		showMarkers(rotation, $pivot, $boundingbox, markers);
 	}
 
+	var draggingMarker = null;
+
+	var rotateCardinalDirection = (function () {
+		var eigth = 45;
+		var sixteenth = eigth / 2;
+		var n   = 0;
+		var e   = 90;
+		var s   = 180;
+		var w   = 270;
+		var ne  = n  + eigth;
+		var se  = e  + eigth;
+		var sw  = s  + eigth;
+		var nw  = w  + eigth;
+		var nne = n  + sixteenth;
+		var nee = ne + sixteenth;
+		var nnw = nw + sixteenth;
+		var nww = w  + sixteenth;
+		var sse = s  - sixteenth;
+		var see = se - sixteenth;
+		var ssw = sw - sixteenth;
+		var sww = w  - sixteenth;
+		var directions = {
+			n   : toRad(n),
+			e   : toRad(e),
+			s   : toRad(s),
+			w   : toRad(w),
+			ne  : toRad(ne),
+			se  : toRad(se),
+			sw  : toRad(sw),
+			nw  : toRad(nw),
+			nne : toRad(nne),
+			nee : toRad(nee),
+			nnw : toRad(nnw),
+			nww : toRad(nww),
+			sse : toRad(sse),
+			see : toRad(see),
+			ssw : toRad(ssw),
+			sww : toRad(sww)
+		};
+
+		return function(rotation, cardinality) {
+			var angle = normalizeAngle(directions[cardinality] + rotation.angle);
+			if (angle < directions.nne) {
+				return 'n';
+			}
+			if (angle < directions.nee) {
+				return 'ne';
+			}
+			if (angle < directions.see) {
+				return 'e';
+			}
+			if (angle < directions.sse) {
+				return 'se';
+			}
+			if (angle < directions.ssw) {
+				return 's';
+			}
+			if (angle < directions.sww) {
+				return 'sw';
+			}
+			if (angle < directions.nww) {
+				return 'w';
+			}
+			if (angle < directions.nnw) {
+				return 'nw';
+			}
+			return 'n';
+		};
+	}());
+
+	function onMove(event) {
+		if (draggingMarker) {
+			console.log(draggingMarker.cardinality);
+			draggingMarker.$element.css({
+				left: event.pageX - draggingMarker.offset,
+				top: event.pageY - draggingMarker.offset
+			});
+		}
+	}
+
+	function onMarkerDown(event) {
+		disableSelection();
+		var $element = $(event.target).closest('.transformer-marker');
+		var cardinality = $element[0].id.replace('transformer-marker-', '');
+		draggingMarker = {
+			$element: $element,
+			offset: Math.ceil($element.outerWidth() / 2),
+			cardinality: cardinality
+		};
+	}
+
+	function onMarkerUp(event) {
+		enableSelection();
+		draggingMarker = null;
+	}
+
+	$markers.on('mousedown', onMarkerDown);
+	$(document).on('mousemove', onMove).on('mouseup', onMarkerUp);
+
 	/**
 	 * ___ __          __ __ __  __      __ __
 	 *  | |__) /\ |\ |(_ |_ /  \|__)|\/||_ |__)
@@ -298,7 +397,9 @@
 		updateRotation   : updateRotation,
 		clearAttributes  : clearAttributes,
 		enableSelection  : enableSelection,
-		disableSelection : disableSelection
+		disableSelection : disableSelection,
+		rotateCardinalDirection
+		                 : rotateCardinalDirection
 	};
 
 }(window, window.jQuery));
