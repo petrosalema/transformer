@@ -1,7 +1,5 @@
 /**
- * ___ __          __ __ __  __      __ __
- *  | |__) /\ |\ |(_ |_ /  \|__)|\/||_ |__)
- *  | | \ /--\| \|__)|  \__/| \ |  ||__| \
+ * Azimuth
  * ---------------------------------------->
  *
  * TODO:
@@ -31,6 +29,80 @@
 	var CSS_TRANSFORM_PROPERTY_NAME = '-webkit-transform';
 	var MUNGED_ATTRIBUTE = 'data-' + Math.random().toString(16).substr(2)
 	                     + '-rotation';
+
+	/**
+	 * Angles of the 16-point compass rose.
+	 *
+	 * Reference: https://en.wikipedia.org/wiki/Compass_rose
+	 */
+	var compass = (function () {
+		var eigth = 45;
+		var sixteenth = eigth / 2;
+		var n   = 0;
+		var e   = 90;
+		var s   = 180;
+		var w   = 270;
+		var ne  = n  + eigth;
+		var se  = e  + eigth;
+		var sw  = s  + eigth;
+		var nw  = w  + eigth;
+		var nne = n  + sixteenth;
+		var ene = ne + sixteenth;
+		var nnw = nw + sixteenth;
+		var wnw = w  + sixteenth;
+		var sse = s  - sixteenth;
+		var ese = se - sixteenth;
+		var ssw = sw - sixteenth;
+		var wsw = w  - sixteenth;
+		return {
+			n   : toRad(n),
+			e   : toRad(e),
+			s   : toRad(s),
+			w   : toRad(w),
+			ne  : toRad(ne),
+			se  : toRad(se),
+			sw  : toRad(sw),
+			nw  : toRad(nw),
+			nne : toRad(nne),
+			ene : toRad(ene),
+			nnw : toRad(nnw),
+			wnw : toRad(wnw),
+			sse : toRad(sse),
+			ese : toRad(ese),
+			ssw : toRad(ssw),
+			wsw : toRad(wsw)
+		};
+	}());
+
+	/**
+	 * DOM elements for the 8 cardinals and ordinals of the compass.
+	 *
+	 * Reference: https://en.wikipedia.org/wiki/Principal_winds
+	 */
+	var winds = {
+		n  : $('<div class="transformer-marker" id="transformer-marker-n" ><div></div></div>').appendTo('body'),
+		s  : $('<div class="transformer-marker" id="transformer-marker-s" ><div></div></div>').appendTo('body'),
+		e  : $('<div class="transformer-marker" id="transformer-marker-e" ><div></div></div>').appendTo('body'),
+		w  : $('<div class="transformer-marker" id="transformer-marker-w" ><div></div></div>').appendTo('body'),
+		nw : $('<div class="transformer-marker" id="transformer-marker-nw"><div></div></div>').appendTo('body'),
+		sw : $('<div class="transformer-marker" id="transformer-marker-sw"><div></div></div>').appendTo('body'),
+		ne : $('<div class="transformer-marker" id="transformer-marker-ne"><div></div></div>').appendTo('body'),
+		se : $('<div class="transformer-marker" id="transformer-marker-se"><div></div></div>').appendTo('body')
+	};
+
+	var $markers = (function collectMarkers(markers) {
+		var $markers = $();
+		var point;
+		for (point in markers) {
+			if (markers.hasOwnProperty(point)) {
+				$markers = $markers.add(markers[point]);
+			}
+		}
+		return $markers;
+	}(winds));
+
+	var $boundingbox = $('<div id="transformer-boundingbox">').appendTo('body');
+	var $pivot = $('<div id="transformer-pivot">').appendTo('body');
 
 	function enableSelection($element) {
 		($element || $('body')).each(function () {
@@ -77,32 +149,8 @@
 		return [vec1[0] + vec2[0], vec1[1] + vec2[1]];
 	}
 
-	var markers = {
-		n  : $('<div class="transformer-marker" id="transformer-marker-n" ><div></div></div>').appendTo('body'),
-		s  : $('<div class="transformer-marker" id="transformer-marker-s" ><div></div></div>').appendTo('body'),
-		e  : $('<div class="transformer-marker" id="transformer-marker-e" ><div></div></div>').appendTo('body'),
-		w  : $('<div class="transformer-marker" id="transformer-marker-w" ><div></div></div>').appendTo('body'),
-		nw : $('<div class="transformer-marker" id="transformer-marker-nw"><div></div></div>').appendTo('body'),
-		sw : $('<div class="transformer-marker" id="transformer-marker-sw"><div></div></div>').appendTo('body'),
-		ne : $('<div class="transformer-marker" id="transformer-marker-ne"><div></div></div>').appendTo('body'),
-		se : $('<div class="transformer-marker" id="transformer-marker-se"><div></div></div>').appendTo('body')
-	};
-
-	var $markers = (function collectMarkers(markers) {
-		var $markers = $();
-		var name;
-		for (name in markers) {
-			if (markers.hasOwnProperty(name)) {
-				$markers = $markers.add(markers[name]);
-			}
-		}
-		return $markers;
-	}(markers));
-	var $boundingbox = $('<div id="transformer-boundingbox">').appendTo('body');
-	var $pivot = $('<div id="transformer-pivot">').appendTo('body');
-
 	/**
-	 * Orientates and shows the given set of markers around an element.
+	 * Orientates and shows the given markers around the rotation.
 	 */
 	function showMarkers(rotation) {
 		var width = rotation.$element.outerWidth();
@@ -117,7 +165,7 @@
 		var sw = [w[0],     s[1]];
 		var se = [e[0],     s[1]];
 
-		var cardinals = {
+		var directions = {
 			n  : n,
 			s  : s,
 			e  : e,
@@ -128,15 +176,15 @@
 			se : se
 		};
 
-		var name;
+		var point;
 		var pos;
-		for (name in cardinals) {
-			if (cardinals.hasOwnProperty(name)) {
+		for (point in directions) {
+			if (directions.hasOwnProperty(point)) {
 				pos = translateVector(
-					rotateVector(cardinals[name], rotation.angle),
+					rotateVector(directions[point], rotation.angle),
 					rotation.pivot
 				);
-				markers[name].css('left', pos[0]).css('top', pos[1]).show();
+				winds[point].css('left', pos[0]).css('top', pos[1]).show();
 			}
 		}
 
@@ -151,6 +199,9 @@
 		      .css('top', rotation.pivot[1]);
 	}
 
+	/**
+	 * Hides rotation markers.
+	 */
 	(function hideMarkers() {
 		$pivot.hide();
 		$markers.hide();
@@ -158,7 +209,7 @@
 	}());
 
 	/**
-	 * Calculate the angle between (0, 0) and (x, y) in radians.
+	 * Calculates the angle between (0, 0) and (x, y) in radians.
 	 *
 	 * Reference: https://en.wikipedia.org/wiki/atan2
 	 *
@@ -206,6 +257,10 @@
 		)];
 	}
 
+	/**
+	 * Calculates the center of the given element when orientated to the given
+	 * angle.
+	 */
 	function calculateOrigin($element, angle) {
 		var box = calculateBoundingBox(
 			$element.outerWidth(),
@@ -216,12 +271,19 @@
 		return [offset.left + (box[0] / 2), offset.top + (box[1] / 2)];
 	}
 
-	function calculateTransformation(angle) {
+	/**
+	 * Generates a matrix transformation CSS string to rotate an element by the
+	 * given angle.
+	 */
+	function computeTransformation(angle) {
 		var cos = Math.cos(angle);
 		var sin = Math.sin(angle);
 		return 'matrix(' + [cos, sin, -sin, cos, 0, 0].join(',') + ')';
 	}
 
+	/**
+	 * Normalizes the given angle--cycling through 0 to 360.
+	 */
 	function normalizeAngle(radians) {
 		if (radians < 0) {
 			radians = MAX_ANGLE + radians;
@@ -237,7 +299,7 @@
 	}
 
 	/**
-	 * Initialize rotation for the given element at poing (x, y).
+	 * Initializes rotation for the given element at point (x, y).
 	 */
 	function startRotation(element, x, y) {
 		disableSelection();
@@ -256,7 +318,7 @@
 			angle    : start
 		};
 
-		showMarkers(rotation, $pivot, $boundingbox, markers);
+		showMarkers(rotation);
 
 		return rotation;
 	}
@@ -269,10 +331,14 @@
 		if (rotation) {
 			rotation.$element.attr(MUNGED_ATTRIBUTE, rotation.angle);
 		}
+		var point;
+		for (point in winds) {
+			console.log(point, rotateDirection(point, rotation.angle));
+		}
 	}
 
 	/**
-	 * Update the rotation according to the new coordinates (x, y).
+	 * Updates the rotation according to the new coordinates (x, y).
 	 */
 	function updateRotation(rotation, x, y) {
 		rotation.angle = normalizeAngle(rotation.start + calculateAngle(
@@ -281,75 +347,44 @@
 		));
 		rotation.$element.css(
 			CSS_TRANSFORM_PROPERTY_NAME,
-			calculateTransformation(rotation.angle)
+			computeTransformation(rotation.angle)
 		);
-		showMarkers(rotation, $pivot, $boundingbox, markers);
+		showMarkers(rotation);
 	}
 
 	var draggingMarker = null;
 
-	var rotateCardinalDirection = (function () {
-		var eigth = 45;
-		var sixteenth = eigth / 2;
-		var n   = 0;
-		var e   = 90;
-		var s   = 180;
-		var w   = 270;
-		var ne  = n  + eigth;
-		var se  = e  + eigth;
-		var sw  = s  + eigth;
-		var nw  = w  + eigth;
-		var nne = n  + sixteenth;
-		var nee = ne + sixteenth;
-		var nnw = nw + sixteenth;
-		var nww = w  + sixteenth;
-		var sse = s  - sixteenth;
-		var see = se - sixteenth;
-		var ssw = sw - sixteenth;
-		var sww = w  - sixteenth;
-		var directions = {
-			n   : toRad(n),
-			e   : toRad(e),
-			s   : toRad(s),
-			w   : toRad(w),
-			ne  : toRad(ne),
-			se  : toRad(se),
-			sw  : toRad(sw),
-			nw  : toRad(nw),
-			nne : toRad(nne),
-			nee : toRad(nee),
-			nnw : toRad(nnw),
-			nww : toRad(nww),
-			sse : toRad(sse),
-			see : toRad(see),
-			ssw : toRad(ssw),
-			sww : toRad(sww)
-		};
-
-		return function(rotation, cardinality) {
-			var angle = normalizeAngle(directions[cardinality] + rotation.angle);
-			if (angle < directions.nne) {
+	/**
+	 * Given a cardinal or ordinal direction, will return the corresponding
+	 * direction at a given angle from it.
+	 *
+	 * Reference: https://en.wikipedia.org/wiki/Cardinal_direction
+	 */
+	var rotateDirection = (function () {
+		return function rotateDirection(point, angle) {
+			angle = normalizeAngle(angle + compass[point]);
+			if (angle < compass.nne) {
 				return 'n';
 			}
-			if (angle < directions.nee) {
+			if (angle < compass.ene) {
 				return 'ne';
 			}
-			if (angle < directions.see) {
+			if (angle < compass.ese) {
 				return 'e';
 			}
-			if (angle < directions.sse) {
+			if (angle < compass.sse) {
 				return 'se';
 			}
-			if (angle < directions.ssw) {
+			if (angle < compass.ssw) {
 				return 's';
 			}
-			if (angle < directions.sww) {
+			if (angle < compass.wsw) {
 				return 'sw';
 			}
-			if (angle < directions.nww) {
+			if (angle < compass.wnw) {
 				return 'w';
 			}
-			if (angle < directions.nnw) {
+			if (angle < compass.nnw) {
 				return 'nw';
 			}
 			return 'n';
@@ -358,7 +393,6 @@
 
 	function onMove(event) {
 		if (draggingMarker) {
-			console.log(draggingMarker.cardinality);
 			draggingMarker.$element.css({
 				left: event.pageX - draggingMarker.offset,
 				top: event.pageY - draggingMarker.offset
@@ -369,11 +403,10 @@
 	function onMarkerDown(event) {
 		disableSelection();
 		var $element = $(event.target).closest('.transformer-marker');
-		var cardinality = $element[0].id.replace('transformer-marker-', '');
 		draggingMarker = {
 			$element: $element,
 			offset: Math.ceil($element.outerWidth() / 2),
-			cardinality: cardinality
+			direction: $element[0].id.replace('transformer-marker-', '')
 		};
 	}
 
@@ -398,8 +431,7 @@
 		clearAttributes  : clearAttributes,
 		enableSelection  : enableSelection,
 		disableSelection : disableSelection,
-		rotateCardinalDirection
-		                 : rotateCardinalDirection
+		rotateDirection  : rotateDirection
 	};
 
 }(window, window.jQuery));
