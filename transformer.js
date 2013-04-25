@@ -5,7 +5,6 @@
  * TODO:
  * vendor prefixes
  * moving
- * resizing
  */
 (function Transformer(global, $) {
 	'use strict';
@@ -14,6 +13,8 @@
 		eval(uate)('tranformer.js');
 	}
 
+	var $selectedElement;
+
 	/**
 	 * Converts degrees into radians.
 	 *
@@ -21,6 +22,10 @@
 	 */
 	function toRad(degrees) {
 		return degrees * (Math.PI / 180);
+	}
+
+	function toDeg(radians) {
+		return radians * (180 / Math.PI);
 	}
 
 	var MAX_ANGLE = toRad(360);
@@ -224,7 +229,10 @@
 		return Math.atan2(y, x);
 	}
 
-	function getRotation($element) {
+	/**
+	 * @TODO: use the css transform matrix
+	 */
+	function getElementRotation($element) {
 		return parseFloat($element.attr(MUNGED_ATTRIBUTE)) || 0;
 	}
 
@@ -233,8 +241,13 @@
 	 * orientation.
 	 *
 	 * Reference: http://www.codalicio.us/2011/01/how-to-determine-bounding-rectangle-of.html
+	 *
+	 * @returns {Array.<number>} [x, y, w, h]
 	 */
-	function calculateBoundingBox(w, h, angle) {
+	function computeBoundingBox($element, angle) {
+		var w = $element.outerWidth();
+		var h = $element.outerHeight();
+
 		if (angle > HALF_ANGLE) {
 			angle -= HALF_ANGLE;
 		}
@@ -244,31 +257,32 @@
 			w = h;
 			h = originalHeight;
 		}
-		return [(
-			// a = cos(q) * h
-			(Math.cos(RIGHT_ANGLE - angle) * h)
-			+
-			(Math.cos(angle) * w)
-		), (
-			// o = sin(q) * h
-			(Math.sin(RIGHT_ANGLE - angle) * h)
-			+
-			(Math.sin(angle) * w)
-		)];
+
+		var offset = $element.offset();
+
+		return [
+			offset.left,
+			offset.top, (
+				// a = cos(q) * h
+				(Math.cos(RIGHT_ANGLE - angle) * h)
+				+
+				(Math.cos(angle) * w)
+			), (
+				// o = sin(q) * h
+				(Math.sin(RIGHT_ANGLE - angle) * h)
+				+
+				(Math.sin(angle) * w)
+			)
+		];
 	}
 
 	/**
 	 * Calculates the center of the given element when orientated to the given
 	 * angle.
 	 */
-	function calculateOrigin($element, angle) {
-		var box = calculateBoundingBox(
-			$element.outerWidth(),
-			$element.outerHeight(),
-			angle
-		);
-		var offset = $element.offset();
-		return [offset.left + (box[0] / 2), offset.top + (box[1] / 2)];
+	function computeOrigin($element, angle) {
+		var box = computeBoundingBox($element, angle);
+		return [box[0] + (box[2] / 2), box[1] + (box[3] / 2)];
 	}
 
 	/**
@@ -281,6 +295,10 @@
 		return 'matrix(' + [cos, sin, -sin, cos, 0, 0].join(',') + ')';
 	}
 
+	function computeMagnitude(vector) {
+		return Math.sqrt(vector[0] * vector[0] + vector[1] * vector[1]);
+	}
+
 	/**
 	 * Normalizes the given angle--cycling through 0 to 360.
 	 */
@@ -291,10 +309,38 @@
 		return (radians > MAX_ANGLE) ? radians - MAX_ANGLE : radians;
 	}
 
+	// https://en.wikipedia.org/wiki/Scalar_projection
+	// s = |a|cos@ = a.^b
+	// . dot product operation
+	// ^b unit vector in direction of b
+	// |a| is the length of a
+	// and @ is the angle between a and b
+	function computeScalarProjection(vector, theta) {
+		return computeMagnitude(vector) * Math.cos(theta);
+	}
+
+	function projectVector(vector, direction, normal) {
+		// The angle of the vector
+		var vectorAngle = calculateAngle(vector[0], vector[1]);
+
+		// The angle of the direction on which the vector will be projected
+		var directionAngle = calculateAngle(direction[0], direction[1]);
+
+		var scalarProjection = computeScalarProjection(
+			vector,
+			vectorAngle - directionAngle
+		);
+
+		return [
+			scalarProjection * direction[0],
+			scalarProjection * direction[1]
+		];
+	}
+
 	/**
 	 * Cleans an element of transformation annotations.
 	 */
-	function clearAttributes($element) {
+	function clearElementAttributes($element) {
 		$element.removeAttr(MUNGED_ATTRIBUTE);
 	}
 
@@ -305,8 +351,8 @@
 		disableSelection();
 
 		var $element = $(element);
-		var angle = getRotation($element);
-		var pivot = calculateOrigin($element, angle);
+		var angle = getElementRotation($element);
+		var pivot = computeOrigin($element, angle);
 		var anchor = [x, y];
 		var start = angle - calculateAngle(anchor[0] - pivot[0], 0);
 
@@ -320,21 +366,9 @@
 
 		showMarkers(rotation);
 
-		return rotation;
-	}
+		$element.css('cursor', '-webkit-grabbing');
 
-	/**
-	 * Saves the current rotation angle as an attribute on the rotated element
-	 * and hides boundingbox, pivot, and markers.
-	 */
-	function endRotation(rotation) {
-		if (rotation) {
-			rotation.$element.attr(MUNGED_ATTRIBUTE, rotation.angle);
-		}
-		var point;
-		for (point in winds) {
-			console.log(point, rotateDirection(point, rotation.angle));
-		}
+		return rotation;
 	}
 
 	/**
@@ -352,8 +386,6 @@
 		showMarkers(rotation);
 	}
 
-	var draggingMarker = null;
-
 	/**
 	 * Given a cardinal or ordinal direction, will return the corresponding
 	 * direction at a given angle from it.
@@ -363,56 +395,111 @@
 	var rotateDirection = (function () {
 		return function rotateDirection(point, angle) {
 			angle = normalizeAngle(angle + compass[point]);
-			if (angle < compass.nne) {
-				return 'n';
-			}
-			if (angle < compass.ene) {
-				return 'ne';
-			}
-			if (angle < compass.ese) {
-				return 'e';
-			}
-			if (angle < compass.sse) {
-				return 'se';
-			}
-			if (angle < compass.ssw) {
-				return 's';
-			}
-			if (angle < compass.wsw) {
-				return 'sw';
-			}
-			if (angle < compass.wnw) {
-				return 'w';
-			}
-			if (angle < compass.nnw) {
-				return 'nw';
-			}
-			return 'n';
+			return ((angle < compass.nne)
+				? 'n'
+				: (angle < compass.ene)
+				? 'ne'
+				: (angle < compass.ese)
+				? 'e'
+				: (angle < compass.sse)
+				? 'se'
+				: (angle < compass.ssw)
+				? 's'
+				: (angle < compass.wsw)
+				? 'sw'
+				: (angle < compass.wnw)
+				? 'w'
+				: (angle < compass.nnw)
+				? 'nw'
+				: 'n');
 		};
 	}());
 
-	function onMove(event) {
-		if (draggingMarker) {
-			draggingMarker.$element.css({
-				left: event.pageX - draggingMarker.offset,
-				top: event.pageY - draggingMarker.offset
-			});
+	/**
+	 * Updates the resize cursors of all the marker elements.
+	 */
+	var updateCursors = (function () {
+		var cursors = {
+			n  : 'ns-resize',
+			e  : 'ew-resize',
+			s  : 'ns-resize',
+			w  : 'ew-resize',
+			ne : 'ne-resize',
+			sw : 'sw-resize',
+			se : 'se-resize',
+			nw : 'nw-resize'
+		};
+		return function updateCursors(angle) {
+			var point;
+			for (point in winds) {
+				if (winds.hasOwnProperty(point)) {
+					winds[point].css(
+						'cursor',
+						cursors[rotateDirection(point, angle)]
+					);
+				}
+			}
+		};
+	}());
+
+	/**
+	 * Saves the current rotation angle as an attribute on the rotated element
+	 * and hides boundingbox, pivot, and markers.
+	 */
+	function endRotation(rotation) {
+		if (rotation) {
+			rotation.$element.attr(MUNGED_ATTRIBUTE, rotation.angle);
 		}
+		updateCursors(rotation.angle);
+		rotation.$element.css('cursor', '-webkit-grab');
+		$selectedElement = rotation.$element;
+	}
+
+	var resizing = null;
+
+	// https://en.wikipedia.org/wiki/Vector_projection
+	function onMove(event) {
+		if (resizing) {
+			var projection = projectVector([
+				event.pageX - resizing.start[0],
+				event.pageY - resizing.start[1]
+			], resizing.direction);
+
+			resizing.$marker.css({
+				left : resizing.start[0] + projection[0],
+				top  : resizing.start[1] + projection[1],
+			});
+
+			resizing.start = translateVector(resizing.start, projection);
+		}
+	}
+
+	function getDirectionVector(angle) {
+		// The angle of the normal calculated from the origin (0, 0) because
+		// atan2 expects this.
+		var directional = normalizeAngle(angle) - RIGHT_ANGLE;
+
+		// Unit vector from the origin (0, 0) to the direction.
+		return [Math.cos(directional), Math.sin(directional)];
 	}
 
 	function onMarkerDown(event) {
 		disableSelection();
-		var $element = $(event.target).closest('.transformer-marker');
-		draggingMarker = {
-			$element: $element,
-			offset: Math.ceil($element.outerWidth() / 2),
-			direction: $element[0].id.replace('transformer-marker-', '')
+		var $marker = $(event.target).closest('.transformer-marker');
+		var direction = $marker[0].id.replace('transformer-marker-', '');
+		var offset = $marker.offset();
+		var normal = compass[direction] + getElementRotation($selectedElement);
+		resizing = {
+			$marker: $marker,
+			$element: $selectedElement,
+			direction: getDirectionVector(normal),
+			start: [offset.left, offset.top]
 		};
 	}
 
 	function onMarkerUp(event) {
 		enableSelection();
-		draggingMarker = null;
+		resizing = null;
 	}
 
 	$markers.on('mousedown', onMarkerDown);
@@ -425,13 +512,18 @@
 	 * ---------------------------------------->
 	 */
 	global.Transformer = {
-		startRotation    : startRotation,
-		endRotation      : endRotation,
-		updateRotation   : updateRotation,
-		clearAttributes  : clearAttributes,
-		enableSelection  : enableSelection,
-		disableSelection : disableSelection,
-		rotateDirection  : rotateDirection
+		startRotation           : startRotation,
+		endRotation             : endRotation,
+		updateRotation          : updateRotation,
+		clearElementAttributes  : clearElementAttributes,
+		getElementRotation      : getElementRotation,
+		enableSelection         : enableSelection,
+		disableSelection        : disableSelection,
+		rotateDirection         : rotateDirection,
+		computeOrigin           : computeOrigin,
+		computeBoundingBox      : computeBoundingBox,
+		toRad                   : toRad,
+		toDeg                   : toDeg
 	};
 
 }(window, window.jQuery));
