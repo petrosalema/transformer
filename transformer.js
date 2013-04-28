@@ -13,6 +13,26 @@
 		eval(uate)('tranformer.js');
 	}
 
+	(function () {
+		var i;
+		var w = $(window).width();
+		var h = $(window).height();
+		var division = 10;
+		var hd = h / division;
+		var wd = w / division;
+		for (i = 0; i < division; i++) {
+			$('<div style="width:100%;height:1px;position:absolute;background:rgba(0,0,0,0.05);"></div>').offset({
+				left: 0,
+				top: hd * i
+			}).appendTo('body');
+			$('<div style="width:1px;height:' + h + 'px;position:absolute;background:rgba(0,0,0,0.05);"></div>').offset({
+				left: wd * i,
+				top: 0
+			}).appendTo('body');
+		}
+	}());
+
+	var currentRotation;
 	var $selectedElement;
 
 	/**
@@ -315,22 +335,19 @@
 	// ^b unit vector in direction of b
 	// |a| is the length of a
 	// and @ is the angle between a and b
-	function computeScalarProjection(vector, theta) {
-		return computeMagnitude(vector) * Math.cos(theta);
-	}
-
-	function projectVector(vector, direction, normal) {
-		// The angle of the vector
+	function computeScalarProjection(vector, direction) {
 		var vectorAngle = calculateAngle(vector[0], vector[1]);
 
 		// The angle of the direction on which the vector will be projected
 		var directionAngle = calculateAngle(direction[0], direction[1]);
 
-		var scalarProjection = computeScalarProjection(
-			vector,
-			vectorAngle - directionAngle
+		return (
+			computeMagnitude(vector) * Math.cos(vectorAngle - directionAngle)
 		);
+	}
 
+	function projectVector(vector, direction, normal) {
+		var scalarProjection = computeScalarProjection(vector, direction);
 		return [
 			scalarProjection * direction[0],
 			scalarProjection * direction[1]
@@ -365,7 +382,6 @@
 		};
 
 		showMarkers(rotation);
-
 		$element.css('cursor', '-webkit-grabbing');
 
 		return rotation;
@@ -453,25 +469,67 @@
 		updateCursors(rotation.angle);
 		rotation.$element.css('cursor', '-webkit-grab');
 		$selectedElement = rotation.$element;
+		currentRotation = rotation;
 	}
 
 	var resizing = null;
 
 	// https://en.wikipedia.org/wiki/Vector_projection
 	function onMove(event) {
-		if (resizing) {
-			var projection = projectVector([
-				event.pageX - resizing.start[0],
-				event.pageY - resizing.start[1]
-			], resizing.direction);
-
-			resizing.$marker.css({
-				left : resizing.start[0] + projection[0],
-				top  : resizing.start[1] + projection[1],
-			});
-
-			resizing.start = translateVector(resizing.start, projection);
+		if (!resizing) {
+			return;
 		}
+
+		var offset = [
+			event.pageX - resizing.start[0],
+			event.pageY - resizing.start[1]
+		];
+		var direction = resizing.direction;
+		var $element = resizing.$element;
+		var projection = projectVector(offset, resizing.direction);
+		var position = translateVector(resizing.start, projection);
+		var scalarProjection = computeScalarProjection(offset, direction);
+		var before = $element.offset();
+
+		if ('w' === resizing.compassDirection
+				|| 'e' === resizing.compassDirection) {
+			$element.width($element.width() + scalarProjection);
+		} else if ('n' === resizing.compassDirection
+				|| 's' === resizing.compassDirection) {
+			$element.height($element.height() + scalarProjection);
+		} else {
+			// ???
+		}
+
+		if (direction[0] < 0) {
+			before.left = before.left + (scalarProjection * direction[0]);
+		}
+		if (direction[1] < 0) {
+			before.top = before.top + (scalarProjection * direction[1]);
+		}
+
+		$element.offset(before);
+
+		resizing.$marker.css({
+			left: position[0],
+			top: position[1]
+		});
+
+		/*
+		var angle = resizing.normal - RIGHT_ANGLE;
+		var pivot = computeOrigin($element, angle);
+		var anchor = [$element.width(), $element.height()];
+		var start = angle - calculateAngle(anchor[0] - pivot[0], 0);
+		showMarkers({
+			$element : $element,
+			pivot    : pivot,
+			anchor   : anchor,
+			start    : start,
+			angle    : start
+		});
+		*/
+
+		resizing.start = position;
 	}
 
 	function getDirectionVector(angle) {
@@ -485,15 +543,20 @@
 
 	function onMarkerDown(event) {
 		disableSelection();
+
 		var $marker = $(event.target).closest('.transformer-marker');
 		var direction = $marker[0].id.replace('transformer-marker-', '');
 		var offset = $marker.offset();
 		var normal = compass[direction] + getElementRotation($selectedElement);
+
 		resizing = {
 			$marker: $marker,
 			$element: $selectedElement,
+			s: $selectedElement.offset(),
 			direction: getDirectionVector(normal),
-			start: [offset.left, offset.top]
+			start: [offset.left, offset.top],
+			normal: normal,
+			compassDirection: direction
 		};
 	}
 
