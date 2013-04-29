@@ -51,9 +51,19 @@
 	var MAX_ANGLE = toRad(360);
 	var HALF_ANGLE = toRad(180);
 	var RIGHT_ANGLE = toRad(90);
-	var CSS_TRANSFORM_PROPERTY_NAME = '-webkit-transform';
 	var MUNGED_ATTRIBUTE = 'data-' + Math.random().toString(16).substr(2)
 	                     + '-rotation';
+
+	var PREFIXES = ['-webkit', '-moz', '-o'];
+	function vendorPrefix(prop, value) {
+		var obj = {};
+		var i;
+		obj[prop] = value;
+		for (i = 0; i < PREFIXES.length; i++) {
+			obj[PREFIXES[i] + '-' + prop] = value;
+		}
+		return obj;
+	}
 
 	/**
 	 * Angles of the 16-point compass rose.
@@ -131,25 +141,19 @@
 
 	function enableSelection($element) {
 		($element || $('body')).each(function () {
-			$(this).removeAttr('unselectable', 'on').css({
-				'-webkit-user-select': 'all',
-				'   -moz-user-select': 'all',
-				'        user-select': 'all'
-			}).each(function () {
-				this.onselectstart = null;
-			});
+			$(this).removeAttr('unselectable', 'on')
+			       .css(vendorPrefix('user-select', 'all'));
+		}).each(function () {
+			this.onselectstart = null;
 		});
 	}
 
 	function disableSelection($element) {
 		($element || $('body')).each(function () {
-			$(this).attr('unselectable', 'on').css({
-				'-webkit-user-select': 'none',
-				'   -moz-user-select': 'none',
-				'        user-select': 'none'
-			}).each(function () {
-				this.onselectstart = function () { return false; };
-			});
+			$(this).attr('unselectable', 'on')
+			       .css(vendorPrefix('user-select', 'none'));
+		}).each(function () {
+			this.onselectstart = function () { return false; };
 		});
 	}
 
@@ -373,6 +377,8 @@
 		var anchor = [x, y];
 		var start = angle - calculateAngle(anchor[0] - pivot[0], 0);
 
+		$('.box').html(toDeg(start));
+
 		var rotation = {
 			$element : $element,
 			pivot    : pivot,
@@ -395,10 +401,10 @@
 			x - rotation.pivot[0],
 			y - rotation.anchor[1]
 		));
-		rotation.$element.css(
-			CSS_TRANSFORM_PROPERTY_NAME,
+		rotation.$element.css(vendorPrefix(
+			'transform',
 			computeTransformation(rotation.angle)
-		);
+		));
 		showMarkers(rotation);
 	}
 
@@ -497,8 +503,6 @@
 		} else if ('n' === resizing.compassDirection
 				|| 's' === resizing.compassDirection) {
 			$element.height($element.height() + scalarProjection);
-		} else {
-			// ???
 		}
 
 		if (direction[0] < 0) {
