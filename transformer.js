@@ -1,11 +1,4 @@
-/**
- * Azimuth
- * ---------------------------------------->
- *
- * TODO:
- * vendor prefixes
- * moving
- */
+/* Transformer.js | (c) 2013 Petro Salema | petrosalema.github.io/transformer */
 (function Transformer(global, $) {
 	'use strict';
 
@@ -31,9 +24,6 @@
 			}).appendTo('body');
 		}
 	}());
-
-	var currentRotation;
-	var $selectedElement;
 
 	/**
 	 * Converts degrees into radians.
@@ -179,65 +169,6 @@
 	}
 
 	/**
-	 * Orientates and shows the given markers around the rotation.
-	 */
-	function showMarkers(rotation) {
-		var width = rotation.$element.outerWidth();
-		var height = rotation.$element.outerHeight();
-
-		var n  = [0, -height / 2];
-		var s  = [0,       -n[1]];
-		var e  = [width / 2,   0];
-		var w  = [-e[0],       0];
-		var nw = [w[0],     n[1]];
-		var ne = [e[0],     n[1]];
-		var sw = [w[0],     s[1]];
-		var se = [e[0],     s[1]];
-
-		var directions = {
-			n  : n,
-			s  : s,
-			e  : e,
-			w  : w,
-			nw : nw,
-			ne : ne,
-			sw : sw,
-			se : se
-		};
-
-		var point;
-		var pos;
-		for (point in directions) {
-			if (directions.hasOwnProperty(point)) {
-				pos = translateVector(
-					rotateVector(directions[point], rotation.angle),
-					rotation.pivot
-				);
-				winds[point].css('left', pos[0]).css('top', pos[1]).show();
-			}
-		}
-
-		var offset = rotation.$element.offset();
-
-		$boundingbox.show().offset(offset)
-		            .css('width', (rotation.pivot[0] - offset.left) * 2)
-		            .css('height', (rotation.pivot[1] - offset.top) * 2);
-
-		$pivot.show()
-		      .css('left', rotation.pivot[0])
-		      .css('top', rotation.pivot[1]);
-	}
-
-	/**
-	 * Hides rotation markers.
-	 */
-	(function hideMarkers() {
-		$pivot.hide();
-		$markers.hide();
-		$boundingbox.hide();
-	}());
-
-	/**
 	 * Calculates the angle between (0, 0) and (x, y) in radians.
 	 *
 	 * Reference: https://en.wikipedia.org/wiki/atan2
@@ -251,13 +182,6 @@
 	 */
 	function calculateAngle(x, y) {
 		return Math.atan2(y, x);
-	}
-
-	/**
-	 * @TODO: use the css transform matrix
-	 */
-	function getElementRotation($element) {
-		return parseFloat($element.attr(MUNGED_ATTRIBUTE)) || 0;
 	}
 
 	/**
@@ -304,8 +228,7 @@
 	 * Calculates the center of the given element when orientated to the given
 	 * angle.
 	 */
-	function computeOrigin($element, angle) {
-		var box = computeBoundingBox($element, angle);
+	function computeOrigin(box) {
 		return [box[0] + (box[2] / 2), box[1] + (box[3] / 2)];
 	}
 
@@ -340,17 +263,15 @@
 	// |a| is the length of a
 	// and @ is the angle between a and b
 	function computeScalarProjection(vector, direction) {
-		var vectorAngle = calculateAngle(vector[0], vector[1]);
+		var angle = calculateAngle(vector[0], vector[1]);
 
 		// The angle of the direction on which the vector will be projected
 		var directionAngle = calculateAngle(direction[0], direction[1]);
 
-		return (
-			computeMagnitude(vector) * Math.cos(vectorAngle - directionAngle)
-		);
+		return computeMagnitude(vector) * Math.cos(angle - directionAngle);
 	}
 
-	function projectVector(vector, direction, normal) {
+	function projectVector(vector, direction) {
 		var scalarProjection = computeScalarProjection(vector, direction);
 		return [
 			scalarProjection * direction[0],
@@ -358,54 +279,13 @@
 		];
 	}
 
-	/**
-	 * Cleans an element of transformation annotations.
-	 */
-	function clearElementAttributes($element) {
-		$element.removeAttr(MUNGED_ATTRIBUTE);
-	}
+	function getDirectionVector(angle) {
+		// The angle of the normal calculated from the origin (0, 0) because
+		// atan2 expects this.
+		var directional = normalizeAngle(angle) - RIGHT_ANGLE;
 
-	/**
-	 * Initializes rotation for the given element at point (x, y).
-	 */
-	function startRotation(element, x, y) {
-		disableSelection();
-
-		var $element = $(element);
-		var angle = getElementRotation($element);
-		var pivot = computeOrigin($element, angle);
-		var anchor = [x, y];
-		var start = angle - calculateAngle(anchor[0] - pivot[0], 0);
-
-		$('.box').html(toDeg(start));
-
-		var rotation = {
-			$element : $element,
-			pivot    : pivot,
-			anchor   : anchor,
-			start    : start,
-			angle    : start
-		};
-
-		showMarkers(rotation);
-		$element.css('cursor', '-webkit-grabbing');
-
-		return rotation;
-	}
-
-	/**
-	 * Updates the rotation according to the new coordinates (x, y).
-	 */
-	function updateRotation(rotation, x, y) {
-		rotation.angle = normalizeAngle(rotation.start + calculateAngle(
-			x - rotation.pivot[0],
-			y - rotation.anchor[1]
-		));
-		rotation.$element.css(vendorPrefix(
-			'transform',
-			computeTransformation(rotation.angle)
-		));
-		showMarkers(rotation);
+		// Unit vector from the origin (0, 0) to the direction.
+		return [Math.cos(directional), Math.sin(directional)];
 	}
 
 	/**
@@ -451,13 +331,13 @@
 			se : 'se-resize',
 			nw : 'nw-resize'
 		};
-		return function updateCursors(angle) {
+		return function updateCursors(orientation) {
 			var point;
 			for (point in winds) {
 				if (winds.hasOwnProperty(point)) {
 					winds[point].css(
 						'cursor',
-						cursors[rotateDirection(point, angle)]
+						cursors[rotateDirection(point, orientation.rotation)]
 					);
 				}
 			}
@@ -465,132 +345,276 @@
 	}());
 
 	/**
-	 * Saves the current rotation angle as an attribute on the rotated element
-	 * and hides boundingbox, pivot, and markers.
+	 * Orientates and shows the given markers around the rotation.
 	 */
-	function endRotation(rotation) {
-		if (rotation) {
-			rotation.$element.attr(MUNGED_ATTRIBUTE, rotation.angle);
-		}
-		updateCursors(rotation.angle);
-		rotation.$element.css('cursor', '-webkit-grab');
-		$selectedElement = rotation.$element;
-		currentRotation = rotation;
-	}
-
-	var resizing = null;
-
-	// https://en.wikipedia.org/wiki/Vector_projection
-	function onMove(event) {
-		if (!resizing) {
+	function showMarkers(orientation) {
+		if (!orientation) {
 			return;
 		}
 
-		var offset = [
-			event.pageX - resizing.start[0],
-			event.pageY - resizing.start[1]
-		];
-		var direction = resizing.direction;
-		var $element = resizing.$element;
-		var projection = projectVector(offset, resizing.direction);
-		var position = translateVector(resizing.start, projection);
-		var scalarProjection = computeScalarProjection(offset, direction);
-		var before = $element.offset();
+		var width = orientation.$element.outerWidth();
+		var height = orientation.$element.outerHeight();
 
-		if ('w' === resizing.compassDirection
-				|| 'e' === resizing.compassDirection) {
+		var n  = [0, -height / 2];
+		var s  = [0,       -n[1]];
+		var e  = [width / 2,   0];
+		var w  = [-e[0],       0];
+		var nw = [w[0],     n[1]];
+		var ne = [e[0],     n[1]];
+		var sw = [w[0],     s[1]];
+		var se = [e[0],     s[1]];
+
+		var directions = {
+			n  : n,
+			s  : s,
+			e  : e,
+			w  : w,
+			nw : nw,
+			ne : ne,
+			sw : sw,
+			se : se
+		};
+
+		var origin = computeOrigin(computeBoundingBox(
+			orientation.$element,
+			orientation.rotation
+		));
+
+		var point;
+		var pos;
+		for (point in directions) {
+			if (directions.hasOwnProperty(point)) {
+				pos = translateVector(
+					rotateVector(directions[point], orientation.rotation),
+					origin
+				);
+				winds[point].css('left', pos[0]).css('top', pos[1]).show();
+			}
+		}
+
+		var offset = orientation.$element.offset();
+
+		$boundingbox.show().offset(offset)
+		            .css('width', (origin[0] - offset.left) * 2)
+		            .css('height', (origin[1] - offset.top) * 2);
+
+		$pivot.show().css('left', origin[0]).css('top', origin[1]);
+
+		updateCursors(orientation);
+	}
+
+	/**
+	 * Hides rotation markers.
+	 */
+	(function hideMarkers() {
+		$pivot.hide();
+		$markers.hide();
+		$boundingbox.hide();
+	}());
+
+	/**
+	 * @TODO: use the css transform matrix
+	 */
+	function getElementRotation($element) {
+		return parseFloat($element.attr(MUNGED_ATTRIBUTE)) || 0;
+	}
+
+	/**
+	 * Cleans an element of transformation annotations.
+	 */
+	function clearElementAttributes($element) {
+		$element.removeAttr(MUNGED_ATTRIBUTE);
+	}
+
+
+	// ---------- Creating ----------
+
+
+	function startCreating(x, y) {
+		disableSelection();
+		var $element = $('<div class="transformer-element">⇡</div>').appendTo('body');
+		$element.css('position', 'absolute').css({
+			left: x,
+			top: y
+		});
+		return {create: {
+			$element: $element,
+			x: x,
+			y: y,
+			rotation: 0
+		}};
+	}
+
+	function updateCreating(operation, x, y) {
+		operation.$element.css({
+			width: x - operation.x,
+			height: y - operation.y
+		});
+	}
+
+	function endCreating(operation) {
+		return operation.$element;
+	}
+
+
+	// ---------- Rotating ----------
+
+
+	/**
+	 * Initializes rotation for the given element at point (x, y).
+	 */
+	function startRotating(element, x, y) {
+		disableSelection();
+		var $element = $(element).css('cursor', '-webkit-grabbing');
+		var rotation = getElementRotation($element);
+		var bounding = computeBoundingBox($element, rotation);
+		return {rotate: {
+			x: bounding[0],
+			y: bounding[1],
+			$element : $element,
+			origin: computeOrigin(bounding),
+			start: rotation,
+			rotation: rotation,
+			anchor: [x, y]
+		}};
+	}
+
+	/**
+	 * Updates the rotation according to the new coordinates (x, y).
+	 */
+	function updateRotating(operation, x, y) {
+		operation.rotation = normalizeAngle(operation.start + calculateAngle(
+			x - operation.origin[0],
+			y - operation.anchor[1]
+		));
+		operation.$element.css(vendorPrefix(
+			'transform',
+			computeTransformation(operation.rotation)
+		));
+	}
+
+	/**
+	 * Saves the current rotation angle as an attribute on the rotated element
+	 * and hides boundingbox, pivot, and markers.
+	 */
+	function endRotating(operation) {
+		operation.$element.attr(MUNGED_ATTRIBUTE, operation.rotation);
+		operation.$element.css('cursor', '-webkit-grab');
+		return operation.$element;
+	}
+
+
+	// ---------- Resizing ----------
+
+
+	function startResizing($element, marker, x, y) {
+		disableSelection();
+		var $marker = $(marker).closest('.transformer-marker');
+		var direction = $marker[0].id.replace('transformer-marker-', '');
+		var offset = $marker.offset();
+		var rotation = getElementRotation($element);
+		var normal = compass[direction] + rotation;
+		return {resize: {
+			$marker: $marker,
+			$element: $element,
+			direction: getDirectionVector(normal),
+			start: [offset.left, offset.top],
+			normal: normal,
+			compassDirection: direction,
+			rotation: rotation
+		}};
+	}
+
+	// https://en.wikipedia.org/wiki/Vector_projection
+	function updateResizing(operation, x, y) {
+		var delta = [x - operation.start[0], y - operation.start[1]];
+		var direction = operation.direction;
+		var $element = operation.$element;
+		var projection = projectVector(delta, direction);
+		var position = translateVector(operation.start, projection);
+		var scalarProjection = computeScalarProjection(delta, direction);
+		var offset = $element.offset();
+
+		if ('w' === operation.compassDirection
+				|| 'e' === operation.compassDirection) {
+			operation.w = $element.width() + scalarProjection;
 			$element.width($element.width() + scalarProjection);
-		} else if ('n' === resizing.compassDirection
-				|| 's' === resizing.compassDirection) {
+		} else if ('n' === operation.compassDirection
+				|| 's' === operation.compassDirection) {
 			$element.height($element.height() + scalarProjection);
 		}
 
 		if (direction[0] < 0) {
-			before.left = before.left + (scalarProjection * direction[0]);
+			offset.left = offset.left + (scalarProjection * direction[0]);
 		}
 		if (direction[1] < 0) {
-			before.top = before.top + (scalarProjection * direction[1]);
+			offset.top = offset.top + (scalarProjection * direction[1]);
 		}
 
-		$element.offset(before);
+		$element.offset(offset);
 
-		resizing.$marker.css({
+		operation.$marker.css({
 			left: position[0],
 			top: position[1]
 		});
 
-		/*
-		var angle = resizing.normal - RIGHT_ANGLE;
-		var pivot = computeOrigin($element, angle);
-		var anchor = [$element.width(), $element.height()];
-		var start = angle - calculateAngle(anchor[0] - pivot[0], 0);
-		showMarkers({
-			$element : $element,
-			pivot    : pivot,
-			anchor   : anchor,
-			start    : start,
-			angle    : start
-		});
-		*/
-
-		resizing.start = position;
+		operation.start = position;
 	}
 
-	function getDirectionVector(angle) {
-		// The angle of the normal calculated from the origin (0, 0) because
-		// atan2 expects this.
-		var directional = normalizeAngle(angle) - RIGHT_ANGLE;
-
-		// Unit vector from the origin (0, 0) to the direction.
-		return [Math.cos(directional), Math.sin(directional)];
+	function endResizing(operation) {
+		return operation.$element;
 	}
 
-	function onMarkerDown(event) {
-		disableSelection();
-
-		var $marker = $(event.target).closest('.transformer-marker');
-		var direction = $marker[0].id.replace('transformer-marker-', '');
-		var offset = $marker.offset();
-		var normal = compass[direction] + getElementRotation($selectedElement);
-
-		resizing = {
-			$marker: $marker,
-			$element: $selectedElement,
-			s: $selectedElement.offset(),
-			direction: getDirectionVector(normal),
-			start: [offset.left, offset.top],
-			normal: normal,
-			compassDirection: direction
-		};
+	function update(operation, x, y) {
+		if (operation.create) {
+			updateCreating(operation.create, x, y);
+		} else if (operation.rotate) {
+			updateRotating(operation.rotate, x, y);
+		} else if (operation.resize) {
+			updateResizing(operation.resize, x, y);
+		}
+		showMarkers(operation.create || operation.rotate || operation.resize);
 	}
 
-	function onMarkerUp(event) {
+	function end(operation) {
 		enableSelection();
-		resizing = null;
+		if (operation.create) {
+			endCreating(operation.create);
+		} else if (operation.rotate) {
+			endRotating(operation.rotate);
+		} else if (operation.resize) {
+			endResizing(operation.resize);
+		}
+		var orientation = operation.create
+		               || operation.rotate
+		               || operation.resize;
+		showMarkers(orientation);
+		return orientation.$element;
 	}
-
-	$markers.on('mousedown', onMarkerDown);
-	$(document).on('mousemove', onMove).on('mouseup', onMarkerUp);
 
 	/**
 	 * ___ __          __ __ __  __      __ __
 	 *  | |__) /\ |\ |(_ |_ /  \|__)|\/||_ |__)
 	 *  | | \ /--\| \|__)|  \__/| \ |  ||__| \
-	 * ---------------------------------------->
+	 * >--------------------------------------->
 	 */
 	global.Transformer = {
-		startRotation           : startRotation,
-		endRotation             : endRotation,
-		updateRotation          : updateRotation,
-		clearElementAttributes  : clearElementAttributes,
-		getElementRotation      : getElementRotation,
-		enableSelection         : enableSelection,
-		disableSelection        : disableSelection,
-		rotateDirection         : rotateDirection,
-		computeOrigin           : computeOrigin,
-		computeBoundingBox      : computeBoundingBox,
-		toRad                   : toRad,
-		toDeg                   : toDeg
+		startCreating: startCreating,
+		startRotating: startRotating,
+		startResizing: startResizing,
+		updateCreating: updateCreating,
+		updateRotating: updateRotating,
+		updateResizing: updateResizing,
+		endCreating: endCreating,
+		endRotating: endRotating,
+		endResizing: endResizing,
+		update: update,
+		end: end,
+		clearElementAttributes: clearElementAttributes,
+		enableSelection: enableSelection,
+		disableSelection: disableSelection,
+		toRad: toRad,
+		toDeg: toDeg
 	};
 
 }(window, window.jQuery));
