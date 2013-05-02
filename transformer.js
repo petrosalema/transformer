@@ -6,23 +6,41 @@
 		eval(uate)('tranformer.js');
 	}
 
-	(function () {
+	(function showGrid() {
+		var size = 50;
+		var w = $(window).width() + size;
+		var h = $(window).height() + size;
+		var rows = Math.ceil(h / size);
+		var cols = Math.ceil(w / size);
 		var i;
-		var w = $(window).width();
-		var h = $(window).height();
-		var division = 10;
-		var hd = h / division;
-		var wd = w / division;
-		for (i = 0; i < division; i++) {
-			$('<div style="width:100%;height:1px;position:absolute;background:rgba(0,0,0,0.05);"></div>').offset({
+		$('.transformer-grid-line').remove();
+		for (i = 0; i < rows; i++) {
+			$('<div class="transformer-grid-line"></div>').css({
+				position: 'absolute',
+				borderTop: '1px dashed rgba(0,0,0,0.1)',
+				width: w,
+				height: 1,
 				left: 0,
-				top: hd * i
+				top: size * i
 			}).appendTo('body');
-			$('<div style="width:1px;height:' + h + 'px;position:absolute;background:rgba(0,0,0,0.05);"></div>').offset({
-				left: wd * i,
+		}
+		for (i = 0; i < cols; i++) {
+			$('<div class="transformer-grid-line"></div>').css({
+				position: 'absolute',
+				borderLeft: '1px dashed rgba(0,0,0,0.1)',
+				width: 1,
+				height: h,
+				left: size * i,
 				top: 0
 			}).appendTo('body');
 		}
+		var timer;
+		$(window).resize(function () {
+			if (timer) {
+				clearTimeout(timer);
+			}
+			timer = setTimeout(showGrid, 200);
+		});
 	}());
 
 	/**
