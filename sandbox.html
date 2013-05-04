@@ -32,6 +32,7 @@
 	<script src="vendor/mandox/esprima.js"></script>
 	<script src="vendor/mandox/stacktrace.js"></script>
 	<script src="vendor/mandox/mandox.js"></script>
+	<script src="math.js"></script>
 	<script src="transformer.js"></script>
 	<script>
 		(function ($) {
@@ -76,6 +77,13 @@
 			function mouseMoveOnDocument($event) {
 				if (operation) {
 					Transformer.update(operation, $event.pageX, $event.pageY);
+					if (operation.rotate) {
+						operation.rotate.$element.html(
+							MathUtil.round(MathUtil.to_deg(operation.rotate.rotation), 2)
+							+
+							'&deg;'
+						);
+					}
 				}
 			}
 

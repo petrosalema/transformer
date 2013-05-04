@@ -63,5 +63,5 @@
 }
 #transformer-boundingbox {
 	position: absolute;
-	outline: 1px dashed rgba(0, 0, 0, 0.1);
+	outline: 5px solid rgba(230, 200, 40, 0.1);
 }

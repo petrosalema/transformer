@@ -1,5 +1,6 @@
 /* Transformer.js | (c) 2013 Petro Salema | petrosalema.github.io/transformer */
-(function Transformer(global, $) {
+// euclidean.js
+(function Transformer(global, math, $) {
 	'use strict';
 
 	if (typeof mandox !== 'undefined') {
@@ -43,35 +44,34 @@
 		});
 	}());
 
-	/**
-	 * Converts degrees into radians.
-	 *
-	 * Reference: https://en.wikipedia.org/wiki/Radian
-	 */
-	function toRad(degrees) {
-		return degrees * (Math.PI / 180);
+	function enableSelection($element) {
+		($element || $('body')).each(function () {
+			$(this).removeAttr('unselectable', 'on')
+			       .css(VENDOR_PREFIX + '-user-select', 'all');
+		}).each(function () {
+			this.onselectstart = null;
+		});
 	}
 
-	function toDeg(radians) {
-		return radians * (180 / Math.PI);
+	function disableSelection($element) {
+		($element || $('body')).each(function () {
+			$(this).attr('unselectable', 'on')
+			       .css(VENDOR_PREFIX + '-user-select', 'none');
+		}).each(function () {
+			this.onselectstart = function () { return false; };
+		});
 	}
 
-	var MAX_ANGLE = toRad(360);
-	var HALF_ANGLE = toRad(180);
-	var RIGHT_ANGLE = toRad(90);
-	var MUNGED_ATTRIBUTE = 'data-' + Math.random().toString(16).substr(2)
-	                     + '-rotation';
-
-	var PREFIXES = ['-webkit', '-moz', '-o'];
-	function vendorPrefix(prop, value) {
-		var obj = {};
+	var VENDOR_PREFIX = (function (prefixes) {
+		var $element = $('<div></div');
 		var i;
-		obj[prop] = value;
-		for (i = 0; i < PREFIXES.length; i++) {
-			obj[PREFIXES[i] + '-' + prop] = value;
+		for (i = 0; i < prefixes.length; i++) {
+			if (typeof $element.css(prefixes[i] + '-transform') !== 'undefined') {
+				return prefixes[i];
+			}
 		}
-		return obj;
-	}
+		return '';
+	}(['-webkit', '-moz', '-o']));
 
 	/**
 	 * Angles of the 16-point compass rose.
@@ -98,22 +98,22 @@
 		var ssw = sw - sixteenth;
 		var wsw = w  - sixteenth;
 		return {
-			n   : toRad(n),
-			e   : toRad(e),
-			s   : toRad(s),
-			w   : toRad(w),
-			ne  : toRad(ne),
-			se  : toRad(se),
-			sw  : toRad(sw),
-			nw  : toRad(nw),
-			nne : toRad(nne),
-			ene : toRad(ene),
-			nnw : toRad(nnw),
-			wnw : toRad(wnw),
-			sse : toRad(sse),
-			ese : toRad(ese),
-			ssw : toRad(ssw),
-			wsw : toRad(wsw)
+			n   : math.to_rad(n),
+			e   : math.to_rad(e),
+			s   : math.to_rad(s),
+			w   : math.to_rad(w),
+			ne  : math.to_rad(ne),
+			se  : math.to_rad(se),
+			sw  : math.to_rad(sw),
+			nw  : math.to_rad(nw),
+			nne : math.to_rad(nne),
+			ene : math.to_rad(ene),
+			nnw : math.to_rad(nnw),
+			wnw : math.to_rad(wnw),
+			sse : math.to_rad(sse),
+			ese : math.to_rad(ese),
+			ssw : math.to_rad(ssw),
+			wsw : math.to_rad(wsw)
 		};
 	}());
 
@@ -133,7 +133,7 @@
 		se : $('<div class="transformer-marker" id="transformer-marker-se"><div></div></div>').appendTo('body')
 	};
 
-	var $markers = (function collectMarkers(markers) {
+	var $markers = (function (markers) {
 		var $markers = $();
 		var point;
 		for (point in markers) {
@@ -147,64 +147,9 @@
 	var $boundingbox = $('<div id="transformer-boundingbox">').appendTo('body');
 	var $pivot = $('<div id="transformer-pivot">').appendTo('body');
 
-	function enableSelection($element) {
-		($element || $('body')).each(function () {
-			$(this).removeAttr('unselectable', 'on')
-			       .css(vendorPrefix('user-select', 'all'));
-		}).each(function () {
-			this.onselectstart = null;
-		});
-	}
-
-	function disableSelection($element) {
-		($element || $('body')).each(function () {
-			$(this).attr('unselectable', 'on')
-			       .css(vendorPrefix('user-select', 'none'));
-		}).each(function () {
-			this.onselectstart = function () { return false; };
-		});
-	}
-
 	/**
-	 * Rotates a vector by the given radian angle.
-	 *
-	 * Reference: https://en.wikipedia.org/wiki/Rotation_(mathematics)
-	 */
-	function rotateVector(vec, theta) {
-		var cos = Math.cos(theta);
-		var sin = Math.sin(theta);
-		return [
-			(vec[0] * cos) - (vec[1] * sin),
-			(vec[0] * sin) + (vec[1] * cos)
-		];
-	}
-
-	/**
-	 * Adds the given vectors and returns a new copy.
-	 */
-	function translateVector(vec1, vec2) {
-		return [vec1[0] + vec2[0], vec1[1] + vec2[1]];
-	}
-
-	/**
-	 * Calculates the angle between (0, 0) and (x, y) in radians.
-	 *
-	 * Reference: https://en.wikipedia.org/wiki/atan2
-	 *
-	 * atan2(y, x) is the angle in radians between the positive x-axis of a
-	 * plane and the point given by the coordinates (x, y) on it. The angle is
-	 * positive for counter-clockwise angles (upper half-plane, y > 0), and
-	 * negative for clockwise angles (lower half-plane, y < 0).
-	 *
-	 * @return {number}
-	 */
-	function calculateAngle(x, y) {
-		return Math.atan2(y, x);
-	}
-
-	/**
-	 * Calculate the height and width of the bounding box for the given
-	 * orientation.
+	 * Calculates the dimensions of a bounding box for the given element when
+	 * orientated according to the specified angle.
 	 *
 	 * Reference: http://www.codalicio.us/2011/01/how-to-determine-bounding-rectangle-of.html
 	 *
@@ -214,11 +159,11 @@
 		var w = $element.outerWidth();
 		var h = $element.outerHeight();
 
-		if (angle > HALF_ANGLE) {
-			angle -= HALF_ANGLE;
+		if (angle > math.HALF_ANGLE) {
+			angle -= math.HALF_ANGLE;
 		}
-		if (angle > RIGHT_ANGLE) {
-			angle -= RIGHT_ANGLE;
+		if (angle > math.RIGHT_ANGLE) {
+			angle -= math.RIGHT_ANGLE;
 			var originalHeight = w;
 			w = h;
 			h = originalHeight;
@@ -229,13 +174,13 @@
 		return [
 			offset.left,
 			offset.top, (
-				// a = cos(q) * h
-				(Math.cos(RIGHT_ANGLE - angle) * h)
+				// Because a = cos(q) * h
+				(Math.cos(math.RIGHT_ANGLE - angle) * h)
 				+
 				(Math.cos(angle) * w)
 			), (
-				// o = sin(q) * h
-				(Math.sin(RIGHT_ANGLE - angle) * h)
+				// Because o = sin(q) * h
+				(Math.sin(math.RIGHT_ANGLE - angle) * h)
 				+
 				(Math.sin(angle) * w)
 			)
@@ -243,66 +188,121 @@
 	}
 
 	/**
-	 * Calculates the center of the given element when orientated to the given
-	 * angle.
+	 * Calculates the absolute center coordinates of the given bounding box.
 	 */
 	function computeOrigin(box) {
 		return [box[0] + (box[2] / 2), box[1] + (box[3] / 2)];
 	}
 
 	/**
-	 * Generates a matrix transformation CSS string to rotate an element by the
-	 * given angle.
+	 * The unit matrix from which transformation are made
+	 *
+	 * The transformation matrix is in column-major order:
+	 *
+	 * A = | a b tx |
+	 *     | c d ty |
+	 *
+	 * is represented contiguously as the sequence [ a c  b d  tx ty ]
+	 *
+	 * where:
+	 * <a c> is the vector in the direction of the x-axis,
+	 * <b d> is the vector in the direction of the y-axis,
+	 * and <tx ty> is the offset from the origin
+	 *
+	 * References:
+	 * https://en.wikipedia.org/wiki/Standard_basis
+	 * https://en.wikipedia.org/wiki/Column-major_order#Column-major_order):
 	 */
-	function computeTransformation(angle) {
-		var cos = Math.cos(angle);
-		var sin = Math.sin(angle);
-		return 'matrix(' + [cos, sin, -sin, cos, 0, 0].join(',') + ')';
+	var STANDARD_BASIS = math.matrix(
+		[1, 0, 0],
+		[0, 1, 0]
+	);
+
+	/**
+	 * Generates a matrix transformation CSS string to transform an element.
+	 *
+	 * References:
+	 * http://www.w3.org/TR/SVG/coords.html#TransformMatrixDefined
+	 * http://www.useragentman.com/IETransformTranslator/
+	 * http://dev.opera.com/articles/view/understanding-the-css-transforms-matrix/#calculatingtransform
+	 * http://en.wikipedia.org/wiki/Coordinate_rotation
+	 */
+	function css_transformation_matrix(operation) {
+		var matrix = STANDARD_BASIS;
+		if (typeof operation.rotation !== 'undefined') {
+			matrix = math.m_rotate(matrix, operation.rotation);
+		}
+		if (typeof operation.translation !== 'undefined') {
+			matrix = math.m_translate(matrix, operation.translation);
+		}
+		if (typeof operation.scaling !== 'undefined') {
+			matrix = math.m_scale(matrix, operation.scale);
+		}
+		if (typeof operation.skew !== 'undefined') {
+			matrix = math.m_skew(matrix, operation.skew);
+		}
+		return 'matrix(' + matrix.toString() + ')';
 	}
 
-	function computeMagnitude(vector) {
-		return Math.sqrt(vector[0] * vector[0] + vector[1] * vector[1]);
+	var SIGNED_FLOATING_POINT = /(\-?[0-9]*\.?[0-9]+)/g;
+
+	function parse_transformation_matrix(transformation) {
+		console.log(transformation);
 	}
 
 	/**
-	 * Normalizes the given angle--cycling through 0 to 360.
+	 * Given matrix A, where
+	 *
+	 * A = | a b tx |
+	 *     | c d ty |
+	 *
+	 * is represented as the sequence [ a c  b d  tx ty ]
+	 *
+	 * rotation t = atan(c/d) = atan(-b/a)
+	 *
+	 * Reference:
+	 * http://stackoverflow.com/questions/4361242/extract-rotation-scale-values-from-2d-transformation-matrix
 	 */
-	function normalizeAngle(radians) {
-		if (radians < 0) {
-			radians = MAX_ANGLE + radians;
+	function m_get_rotation_angle(matrix) {
+		var rotation = Math.atan(matrix[1] / matrix[3]);
+
+		// Because singularities exists at multiples of 90°.  This means that
+		// deriving the rotation angle from a rotation matrix is ambigious.  In
+		// order to resolve this ambiguity, it is necessary to determine in
+		// which quadrant in the cartesian coordinate system the x-axis vector
+		// is in, and with it, modify the derived rotation angle if necessary.
+		if (matrix[0] < 0) {
+			rotation += math.HALF_ANGLE;
 		}
-		return (radians > MAX_ANGLE) ? radians - MAX_ANGLE : radians;
+
+		return math.normalize_angle(rotation);
 	}
 
-	// https://en.wikipedia.org/wiki/Scalar_projection
-	// s = |a|cos@ = a.^b
-	// . dot product operation
-	// ^b unit vector in direction of b
-	// |a| is the length of a
-	// and @ is the angle between a and b
-	function computeScalarProjection(vector, direction) {
-		var angle = calculateAngle(vector[0], vector[1]);
+	/**
+	 * References:
+	 * http://en.wikipedia.org/wiki/Transformation_matrix
+	 * https://developer.mozilla.org/en-US/docs/CSS/trasnform
+	 *
+	 * http://en.wikipedia.org/wiki/Standard_basis
+	 * The standard basis forht Euclidean plan is
+	 * ex = (1,0)
+	 * ey = (0,1)
+	 *
+	 * http://stackoverflow.com/questions/4361242/extract-rotation-scale-values-from-2d-transformation-matrix
+	 * http://snipt.org/ugar9
+	 * https://en.wikipedia.org/wiki/Rotation_matrix#Euler_angles
+	 */
 
-		// The angle of the direction on which the vector will be projected
-		var directionAngle = calculateAngle(direction[0], direction[1]);
-
-		return computeMagnitude(vector) * Math.cos(angle - directionAngle);
-	}
-
-	function projectVector(vector, direction) {
-		var scalarProjection = computeScalarProjection(vector, direction);
-		return [
-			scalarProjection * direction[0],
-			scalarProjection * direction[1]
-		];
+	function getElementRotation($element) {
+		var matrix = $element.css(VENDOR_PREFIX + '-transform')
+		                     .match(SIGNED_FLOATING_POINT);
+		return matrix ? m_get_rotation_angle(matrix) : 0;
 	}
 
 	function getDirectionVector(angle) {
-		// The angle of the normal calculated from the origin (0, 0) because
-		// atan2 expects this.
-		var directional = normalizeAngle(angle) - RIGHT_ANGLE;
-
-		// Unit vector from the origin (0, 0) to the direction.
+		// Because the atan2() function expects the angle of the normal to be
+		// calculated from the origin (0, 0).
+		var directional = math.normalize_angle(angle) - math.RIGHT_ANGLE;
 		return [Math.cos(directional), Math.sin(directional)];
 	}
 
@@ -314,7 +314,7 @@
 	 */
 	var rotateDirection = (function () {
 		return function rotateDirection(point, angle) {
-			angle = normalizeAngle(angle + compass[point]);
+			angle = math.normalize_angle(angle + compass[point]);
 			return ((angle < compass.nne)
 				? 'n'
 				: (angle < compass.ene)
@@ -402,8 +402,8 @@
 		var pos;
 		for (point in directions) {
 			if (directions.hasOwnProperty(point)) {
-				pos = translateVector(
-					rotateVector(directions[point], orientation.rotation),
+				pos = math.v_add(
+					math.v_rotate(directions[point], orientation.rotation),
 					origin
 				);
 				winds[point].css('left', pos[0]).css('top', pos[1]).show();
@@ -430,22 +430,8 @@
 		$boundingbox.hide();
 	}());
 
-	/**
-	 * @TODO: use the css transform matrix
-	 */
-	function getElementRotation($element) {
-		return parseFloat($element.attr(MUNGED_ATTRIBUTE)) || 0;
-	}
 
-	/**
-	 * Cleans an element of transformation annotations.
-	 */
-	function clearElementAttributes($element) {
-		$element.removeAttr(MUNGED_ATTRIBUTE);
-	}
-
-
-	// ---------- Creating ----------
+	// ---------- `creating ----------
 
 
 	function startCreating(x, y) {
@@ -475,7 +461,7 @@
 	}
 
 
-	// ---------- Rotating ----------
+	// ---------- `rotating ----------
 
 
 	/**
@@ -483,17 +469,21 @@
 	 */
 	function startRotating(element, x, y) {
 		disableSelection();
-		var $element = $(element).css('cursor', '-webkit-grabbing');
+		var $element = $(element).css('cursor', VENDOR_PREFIX + '-grabbing');
 		var rotation = getElementRotation($element);
 		var bounding = computeBoundingBox($element, rotation);
+		var anchor = [x, y];
+		var origin = computeOrigin(bounding);
+		var angle = math.angular_direction(math.v_subtract(anchor, origin));
+
 		return {rotate: {
 			x: bounding[0],
 			y: bounding[1],
 			$element : $element,
-			origin: computeOrigin(bounding),
-			start: rotation,
-			rotation: rotation,
-			anchor: [x, y]
+			origin: origin,
+			anchor: anchor,
+			angle: angle,
+			rotation: rotation
 		}};
 	}
 
@@ -501,14 +491,17 @@
 	 * Updates the rotation according to the new coordinates (x, y).
 	 */
 	function updateRotating(operation, x, y) {
-		operation.rotation = normalizeAngle(operation.start + calculateAngle(
-			x - operation.origin[0],
-			y - operation.anchor[1]
-		));
-		operation.$element.css(vendorPrefix(
-			'transform',
-			computeTransformation(operation.rotation)
-		));
+		var theta = math.angular_direction(
+			math.v_subtract([x, y], operation.origin)
+		);
+		operation.rotation = math.normalize_angle(
+			operation.rotation + (theta - operation.angle)
+		);
+		operation.angle = theta;
+		operation.$element.css(
+			VENDOR_PREFIX + '-transform',
+			css_transformation_matrix(operation)
+		);
 	}
 
 	/**
@@ -516,7 +509,6 @@
 	 * and hides boundingbox, pivot, and markers.
 	 */
 	function endRotating(operation) {
-		operation.$element.attr(MUNGED_ATTRIBUTE, operation.rotation);
 		operation.$element.css('cursor', '-webkit-grab');
 		return operation.$element;
 	}
@@ -548,9 +540,9 @@
 		var delta = [x - operation.start[0], y - operation.start[1]];
 		var direction = operation.direction;
 		var $element = operation.$element;
-		var projection = projectVector(delta, direction);
-		var position = translateVector(operation.start, projection);
-		var scalarProjection = computeScalarProjection(delta, direction);
+		var projection = math.v_project(delta, direction);
+		var position = math.v_add(operation.start, projection);
+		var scalarProjection = math.v_scalar_projection(delta, direction);
 		var offset = $element.offset();
 
 		if ('w' === operation.compassDirection
@@ -620,19 +612,20 @@
 		startCreating: startCreating,
 		startRotating: startRotating,
 		startResizing: startResizing,
+
 		updateCreating: updateCreating,
 		updateRotating: updateRotating,
 		updateResizing: updateResizing,
+
 		endCreating: endCreating,
 		endRotating: endRotating,
 		endResizing: endResizing,
+
 		update: update,
 		end: end,
-		clearElementAttributes: clearElementAttributes,
+
 		enableSelection: enableSelection,
 		disableSelection: disableSelection,
-		toRad: toRad,
-		toDeg: toDeg
 	};
 
-}(window, window.jQuery));
+}(window, window.MathUtil, window.jQuery));
