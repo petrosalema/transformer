@@ -59,43 +59,49 @@
 						$event.pageX,
 						$event.pageY
 					);
+					Transformer.mark(operation.rotate);
 				} else {
 					operation = Transformer.startMoving(
 						$event.target,
 						$event.pageX,
 						$event.pageY
 					);
+					Transformer.mark(operation.move);
 				}
 			}
 
 			function mouseDownOnDocument($event) {
 				if ($event.shiftKey) {
 					operation = Transformer.startCreating(
+						$('<div class="transformer-element"></div>').appendTo('body'),
 						$event.pageX,
 						$event.pageY
 					);
+				}
+				if (0 === $($event.target).closest('.transformer-element').length) {
+					Transformer.unmark(operation);
 				}
 			}
 
 			function mouseUpOnDocument($event) {
 				if (operation) {
-					$selected = Transformer.end(operation);
-					$selected.css('cursor', '-webkit-grab');
+					$selected = Transformer.end(operation).$element.css(
+						'cursor',
+						'-webkit-grab'
+					);
 					operation = null;
 				}
 			}
 
 			function mouseMoveOnDocument($event) {
 				if (operation) {
-					Transformer.update(operation, $event.pageX, $event.pageY);
-					if (operation.rotate) {
-						operation.rotate.$element.html(
-							math.round(
-								math.to_deg(operation.rotate.rotation),
-								2
-							) + '&deg;'
-						);
-					}
+					Transformer.mark(
+						Transformer.update(
+							operation,
+							$event.pageX,
+							$event.pageY
+						)
+					);
 				}
 			}
 

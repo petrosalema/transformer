@@ -1,5 +1,4 @@
 /* Transformer.js | (c) 2013 Petro Salema | petrosalema.github.io/transformer */
-// euclidean.js
 (function Transformer(global, mandox, math, $) {
 	'use strict';
 
@@ -327,7 +326,7 @@
 	/**
 	 * Orientates and shows the given markers around the rotation.
 	 */
-	function showMarkers(orientation) {
+	function mark(orientation) {
 		if (!orientation) {
 			return;
 		}
@@ -386,20 +385,22 @@
 	/**
 	 * Hides rotation markers.
 	 */
-	(function hideMarkers() {
+	function unmark() {
 		$pivot.hide();
 		$markers.hide();
 		$boundingbox.hide();
-	}());
+	}
+
+	unmark();
 
 
 	// ---------- `creating ----------
 
 
-	function startCreating(x, y) {
+	function startCreating($element, x, y) {
 		disableSelection();
-		var $element = $('<div class="transformer-element">⇡</div>').appendTo('body');
-		$element.css('position', 'absolute').css({
+		$element.css({
+			position: 'absolute',
 			left: x,
 			top: y
 		});
@@ -416,10 +417,6 @@
 			width: x - operation.x,
 			height: y - operation.y
 		});
-	}
-
-	function endCreating(operation) {
-		return operation.$element;
 	}
 
 
@@ -464,14 +461,6 @@
 			VENDOR_PREFIX + '-transform',
 			css_transformation_matrix(operation)
 		);
-	}
-
-	/**
-	 * Saves the current rotation angle as an attribute on the rotated element
-	 * and hides boundingbox, pivot, and markers.
-	 */
-	function endRotating(operation) {
-		return operation.$element;
 	}
 
 
@@ -532,10 +521,6 @@
 		operation.start = position;
 	}
 
-	function endResizing(operation) {
-		return operation.$element;
-	}
-
 
 	// ---------- `moving ----------
 
@@ -565,46 +550,33 @@
 		operation.position = position;
 	}
 
-	function endMoving(operation) {
-		return operation.$element;
-	}
-
-
 	function update(operation, x, y) {
 		if (operation.create) {
 			updateCreating(operation.create, x, y);
-		} else if (operation.rotate) {
-			updateRotating(operation.rotate, x, y);
-		} else if (operation.resize) {
-			updateResizing(operation.resize, x, y);
-		} else if (operation.move) {
-			updateMoving(operation.move, x, y);
+			return operation.create;
 		}
-		showMarkers(
+		if (operation.rotate) {
+			updateRotating(operation.rotate, x, y);
+			return operation.rotate;
+		}
+		if (operation.resize) {
+			updateResizing(operation.resize, x, y);
+			return operation.resize;
+		}
+		if (operation.move) {
+			updateMoving(operation.move, x, y);
+			return operation.move;
+		}
+	}
+
+	function end(operation) {
+		enableSelection();
+		return (
 			operation.create
 				|| operation.rotate
 					|| operation.resize
 						|| operation.move
 		);
-	}
-
-	function end(operation) {
-		enableSelection();
-		if (operation.create) {
-			endCreating(operation.create);
-		} else if (operation.rotate) {
-			endRotating(operation.rotate);
-		} else if (operation.resize) {
-			endResizing(operation.resize);
-		} else if (operation.move) {
-			endMoving(operation.move);
-		}
-		var orientation = operation.create
-		               || operation.rotate
-		               || operation.resize
-		               || operation.move;
-		showMarkers(orientation);
-		return orientation.$element;
 	}
 
 	/**
@@ -624,13 +596,10 @@
 		updateResizing : updateResizing,
 		updateMoving   : updateMoving,
 
-		endCreating : endCreating,
-		endRotating : endRotating,
-		endResizing : endResizing,
-		endMoving   : endMoving,
-
 		update: update,
 		end: end,
+		mark: mark,
+		unmark: unmark,
 
 		enableSelection: enableSelection,
 		disableSelection: disableSelection,
