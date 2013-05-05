@@ -475,7 +475,7 @@
 	}
 
 
-	// ---------- Resizing ----------
+	// ---------- `resizing ----------
 
 
 	function startResizing($element, marker, x, y) {
@@ -536,6 +536,40 @@
 		return operation.$element;
 	}
 
+
+	// ---------- `moving ----------
+
+
+	function startMoving(element, x, y) {
+		disableSelection();
+		var $element = $(element);
+		return {move: {
+			$element: $element,
+			position: [x, y],
+			rotation: getElementRotation($element)
+		}};
+	}
+
+	function updateMoving(operation, x, y) {
+		var offset = operation.$element.offset();
+		var position = [x, y];
+		var current = [offset.left, offset.top];
+		var delta = math.v_add(
+			current,
+			math.v_subtract(position, operation.position)
+		);
+		operation.$element.offset({
+			left : delta[0],
+			top  : delta[1]
+		});
+		operation.position = position;
+	}
+
+	function endMoving(operation) {
+		return operation.$element;
+	}
+
+
 	function update(operation, x, y) {
 		if (operation.create) {
 			updateCreating(operation.create, x, y);
@@ -543,8 +577,15 @@
 			updateRotating(operation.rotate, x, y);
 		} else if (operation.resize) {
 			updateResizing(operation.resize, x, y);
+		} else if (operation.move) {
+			updateMoving(operation.move, x, y);
 		}
-		showMarkers(operation.create || operation.rotate || operation.resize);
+		showMarkers(
+			operation.create
+				|| operation.rotate
+					|| operation.resize
+						|| operation.move
+		);
 	}
 
 	function end(operation) {
@@ -555,10 +596,13 @@
 			endRotating(operation.rotate);
 		} else if (operation.resize) {
 			endResizing(operation.resize);
+		} else if (operation.move) {
+			endMoving(operation.move);
 		}
 		var orientation = operation.create
 		               || operation.rotate
-		               || operation.resize;
+		               || operation.resize
+		               || operation.move;
 		showMarkers(orientation);
 		return orientation.$element;
 	}
@@ -570,17 +614,20 @@
 	 * >--------------------------------------->
 	 */
 	global.Transformer = {
-		startCreating: startCreating,
-		startRotating: startRotating,
-		startResizing: startResizing,
+		startCreating : startCreating,
+		startRotating : startRotating,
+		startResizing : startResizing,
+		startMoving   : startMoving,
 
-		updateCreating: updateCreating,
-		updateRotating: updateRotating,
-		updateResizing: updateResizing,
+		updateCreating : updateCreating,
+		updateRotating : updateRotating,
+		updateResizing : updateResizing,
+		updateMoving   : updateMoving,
 
-		endCreating: endCreating,
-		endRotating: endRotating,
-		endResizing: endResizing,
+		endCreating : endCreating,
+		endRotating : endRotating,
+		endResizing : endResizing,
+		endMoving   : endMoving,
 
 		update: update,
 		end: end,

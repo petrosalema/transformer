@@ -35,7 +35,7 @@
 	<script src="math.js"></script>
 	<script src="transformer.js"></script>
 	<script>
-		(function ($) {
+		(function ($, math, Transformer) {
 			var operation = null;
 			var $selected = null;
 
@@ -55,6 +55,12 @@
 						Transformer.VENDOR_PREFIX + '-grabbing'
 					);
 					operation = Transformer.startRotating(
+						$event.target,
+						$event.pageX,
+						$event.pageY
+					);
+				} else {
+					operation = Transformer.startMoving(
 						$event.target,
 						$event.pageX,
 						$event.pageY
@@ -84,9 +90,10 @@
 					Transformer.update(operation, $event.pageX, $event.pageY);
 					if (operation.rotate) {
 						operation.rotate.$element.html(
-							MathUtil.round(MathUtil.to_deg(operation.rotate.rotation), 2)
-							+
-							'&deg;'
+							math.round(
+								math.to_deg(operation.rotate.rotation),
+								2
+							) + '&deg;'
 						);
 					}
 				}
@@ -135,7 +142,7 @@
 					timer = setTimeout(show_grid, 200);
 				});
 			}());
-		}(jQuery));
+		}(jQuery, MathUtil, Transformer));
 	</script>
 </body>
 </html>
