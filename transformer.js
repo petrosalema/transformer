@@ -86,20 +86,23 @@
 		};
 	}());
 
+	var MARKER_CLASS = 'transformer-marker-'
+	                 + Math.random().toString(32).substr(2);
+
 	/**
 	 * DOM elements for the 8 cardinals and ordinals of the compass.
 	 *
 	 * Reference: https://en.wikipedia.org/wiki/Principal_winds
 	 */
 	var winds = {
-		n  : $('<div class="transformer-marker" id="transformer-marker-n" ><div></div></div>').appendTo('body'),
-		s  : $('<div class="transformer-marker" id="transformer-marker-s" ><div></div></div>').appendTo('body'),
-		e  : $('<div class="transformer-marker" id="transformer-marker-e" ><div></div></div>').appendTo('body'),
-		w  : $('<div class="transformer-marker" id="transformer-marker-w" ><div></div></div>').appendTo('body'),
-		nw : $('<div class="transformer-marker" id="transformer-marker-nw"><div></div></div>').appendTo('body'),
-		sw : $('<div class="transformer-marker" id="transformer-marker-sw"><div></div></div>').appendTo('body'),
-		ne : $('<div class="transformer-marker" id="transformer-marker-ne"><div></div></div>').appendTo('body'),
-		se : $('<div class="transformer-marker" id="transformer-marker-se"><div></div></div>').appendTo('body')
+		n  : $('<div class="' + MARKER_CLASS + ' transformer-marker" id="transformer-marker-n" ><div></div></div>').appendTo('body'),
+		s  : $('<div class="' + MARKER_CLASS + ' transformer-marker" id="transformer-marker-s" ><div></div></div>').appendTo('body'),
+		e  : $('<div class="' + MARKER_CLASS + ' transformer-marker" id="transformer-marker-e" ><div></div></div>').appendTo('body'),
+		w  : $('<div class="' + MARKER_CLASS + ' transformer-marker" id="transformer-marker-w" ><div></div></div>').appendTo('body'),
+		nw : $('<div class="' + MARKER_CLASS + ' transformer-marker" id="transformer-marker-nw"><div></div></div>').appendTo('body'),
+		sw : $('<div class="' + MARKER_CLASS + ' transformer-marker" id="transformer-marker-sw"><div></div></div>').appendTo('body'),
+		ne : $('<div class="' + MARKER_CLASS + ' transformer-marker" id="transformer-marker-ne"><div></div></div>').appendTo('body'),
+		se : $('<div class="' + MARKER_CLASS + ' transformer-marker" id="transformer-marker-se"><div></div></div>').appendTo('body')
 	};
 
 	var $markers = (function (markers) {
@@ -397,8 +400,7 @@
 	// ---------- `creating ----------
 
 
-	function startCreating($element, x, y) {
-		disableSelection();
+	function startCreating(_, x, y, $element) {
 		$element.css({
 			position: 'absolute',
 			left: x,
@@ -426,9 +428,7 @@
 	/**
 	 * Initializes rotation for the given element at point (x, y).
 	 */
-	function startRotating(element, x, y) {
-		disableSelection();
-		var $element = $(element);
+	function startRotating($element, x, y) {
 		var rotation = getElementRotation($element);
 		var bounding = computeBoundingBox($element, rotation);
 		var anchor = [x, y];
@@ -467,9 +467,8 @@
 	// ---------- `resizing ----------
 
 
-	function startResizing($element, marker, x, y) {
-		disableSelection();
-		var $marker = $(marker).closest('.transformer-marker');
+	function startResizing($marker, x, y, $element) {
+		$marker = $marker.closest('.' + MARKER_CLASS);
 		var direction = $marker[0].id.replace('transformer-marker-', '');
 		var offset = $marker.offset();
 		var rotation = getElementRotation($element);
@@ -525,9 +524,7 @@
 	// ---------- `moving ----------
 
 
-	function startMoving(element, x, y) {
-		disableSelection();
-		var $element = $(element);
+	function startMoving($element, x, y) {
 		return {move: {
 			$element: $element,
 			position: [x, y],
@@ -550,7 +547,29 @@
 		operation.position = position;
 	}
 
-	function update(operation, x, y) {
+	var operations = {
+		create : startCreating,
+		rotate : startRotating,
+		resize : startResizing,
+		move   : startMoving
+	}
+
+	function start(operation, event, other) {
+		if (operations[operation]) {
+			disableSelection();
+			return operations[operation](
+				$(event.target),
+				event.pageX,
+				event.pageY,
+				other
+			);
+		}
+		throw 'Transformer: Unknown operation "' + operation + '"';
+	}
+
+	function update(operation, event) {
+		var x = event.pageX;
+		var y = event.pageY;
 		if (operation.create) {
 			updateCreating(operation.create, x, y);
 			return operation.create;
@@ -596,6 +615,7 @@
 		updateResizing : updateResizing,
 		updateMoving   : updateMoving,
 
+		start: start,
 		update: update,
 		end: end,
 		mark: mark,
@@ -604,7 +624,8 @@
 		enableSelection: enableSelection,
 		disableSelection: disableSelection,
 
-		VENDOR_PREFIX: VENDOR_PREFIX
+		VENDOR_PREFIX: VENDOR_PREFIX,
+		MARKER_CLASS: MARKER_CLASS
 	};
 
 }(window, window.mandox, window.MathUtil, window.jQuery));

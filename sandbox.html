@@ -51,51 +51,34 @@
 			var operation = null;
 			var $selected = null;
 
-			function mouseDownOnMarker($event) {
-				operation = Transformer.startResizing(
-					$selected,
-					$event.target,
-					$event.pageX,
-					$event.pageY
-				);
+			function mouseDownOnMarker(event) {
+				operation = Transformer.start('resize', event, $selected);
 			}
 
-			function mouseDownOnElement($event) {
-				$($event.target).css({
+			function mouseDownOnElement(event) {
+				$(event.target).css({
 					cursor: Transformer.VENDOR_PREFIX + '-grabbing',
 					zIndex: 999
 				});
-				if ($event.ctrlKey) {
-					operation = Transformer.startRotating(
-						$event.target,
-						$event.pageX,
-						$event.pageY
-					);
-					Transformer.mark(operation.rotate);
-				} else {
-					operation = Transformer.startMoving(
-						$event.target,
-						$event.pageX,
-						$event.pageY
-					);
-					Transformer.mark(operation.move);
-				}
+				var action = event.ctrlKey ? 'rotate' : 'move';
+				operation = Transformer.start(action, event);
+				Transformer.mark(operation[action]);
 			}
 
-			function mouseDownOnDocument($event) {
-				if ($event.shiftKey) {
-					operation = Transformer.startCreating(
-						$('<div class="transformer-element"></div>').appendTo('body'),
-						$event.pageX,
-						$event.pageY
+			function mouseDownOnDocument(event) {
+				if (event.shiftKey) {
+					operation = Transformer.start(
+						'create',
+						event,
+						$('<div class="transformer-element"></div>').appendTo('body')
 					);
 				}
-				if (0 === $($event.target).closest('.transformer-element').length) {
+				if (0 === $(event.target).closest('.transformer-element').length) {
 					Transformer.unmark(operation);
 				}
 			}
 
-			function mouseUpOnDocument($event) {
+			function mouseUpOnDocument(event) {
 				if (operation) {
 					$selected = Transformer.end(operation).$element.css(
 						'cursor',
@@ -105,15 +88,9 @@
 				}
 			}
 
-			function mouseMoveOnDocument($event) {
+			function mouseMoveOnDocument(event) {
 				if (operation) {
-					Transformer.mark(
-						Transformer.update(
-							operation,
-							$event.pageX,
-							$event.pageY
-						)
-					);
+					Transformer.mark(Transformer.update(operation, event));
 				}
 			}
 
@@ -122,7 +99,7 @@
 			    .on('mouseup', mouseUpOnDocument)
 			    .on('mousemove', mouseMoveOnDocument)
 			    .on('mousedown', '.transformer-element', mouseDownOnElement)
-			    .on('mousedown', '.transformer-marker', mouseDownOnMarker);
+			    .on('mousedown', '.' + Transformer.MARKER_CLASS, mouseDownOnMarker);
 
 			(function show_grid() {
 				var size = 50;
