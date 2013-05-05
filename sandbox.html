@@ -26,6 +26,18 @@
 	   New box : SHIFT; DRAG
 	Rotate box : CTRL; DRAG
 	</pre>
+<div class="transformer-element"
+     style="
+        position: absolute;
+        left: 453px;
+        top: 143px;
+        width: 255px;
+        height: 231px;
+        -webkit-transform: matrix(0.9692254790162766, 0.2461746754352872, -0.2461746754352872, 0.9692254790162766, 0, 0);
+        -moz-transform: matrix(0.9692254790162766, 0.2461746754352872, -0.2461746754352872, 0.9692254790162766, 0, 0);
+        -o-transform: matrix(0.9692254790162766, 0.2461746754352872, -0.2461746754352872, 0.9692254790162766, 0, 0);
+        -transform: matrix(0.9692254790162766, 0.2461746754352872, -0.2461746754352872, 0.9692254790162766, 0, 0);
+     "></div>
 
 	<script src="vendor/jquery.js"></script>
 	<!-- script src="vendor/jquery-ui.js"></script -->
@@ -49,11 +61,11 @@
 			}
 
 			function mouseDownOnElement($event) {
+				$($event.target).css({
+					cursor: Transformer.VENDOR_PREFIX + '-grabbing',
+					zIndex: 999
+				});
 				if ($event.ctrlKey) {
-					$($event.target).css(
-						'cursor',
-						Transformer.VENDOR_PREFIX + '-grabbing'
-					);
 					operation = Transformer.startRotating(
 						$event.target,
 						$event.pageX,
