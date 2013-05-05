@@ -327,11 +327,18 @@
 	}());
 
 	function style_markers(style) {
-		var radius = ('squares' === style) ? 0 : 8;
-		console.log(radius);
-		$markers.css('border-radius', radius)
-		        .find('>div')
-		        .css('border-radius', radius);
+		var radius, color;
+		if ('squares' === style) {
+			radius = 0;
+			color = '#fff';
+		} else {
+			radius = 8;
+			color = '#f34';
+		}
+		$markers.find('>div').css({
+			borderRadius: radius,
+			backgroundColor: color
+		});
 	}
 
 	/**
@@ -560,7 +567,7 @@
 		rotate : start_rotating,
 		resize : start_resizing,
 		move   : start_moving
-	}
+	};
 
 	function start(operation, event, other) {
 		if (operations[operation]) {

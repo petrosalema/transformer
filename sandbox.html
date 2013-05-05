@@ -29,8 +29,8 @@
 <div class="transformer-element"
      style="
         position: absolute;
-        left: 453px;
-        top: 143px;
+        left: 200px;
+        top: 100px;
         width: 255px;
         height: 231px;
         -webkit-transform: matrix(0.9692254790162766, 0.2461746754352872, -0.2461746754352872, 0.9692254790162766, 0, 0);
@@ -59,6 +59,9 @@
 
 			function mouseDownOnMarker(event) {
 				operation = Transformer.start('resize', event, $selected);
+				var cursor = operation.resize.$marker.css('cursor');
+				$('body').css('cursor', cursor);
+				operation.resize.$element.css('cursor', cursor);
 			}
 
 			function mouseDownOnElement(event) {
@@ -85,8 +88,9 @@
 						$('<div class="transformer-element"></div>').appendTo('body')
 					);
 				}
-				if (0 === $(event.target).closest('.transformer-element').length) {
+				if (0 === $(event.target).closest('.transformer-element,.' + Transformer.MARKER_CLASS).length) {
 					Transformer.unmark(operation);
+					$selected = null;
 				}
 			}
 
@@ -96,6 +100,7 @@
 						'cursor',
 						'-webkit-grab'
 					);
+					$('body').css('cursor', '');
 
 					var has_moved = !start
 					             || event.pageX !== start[0] 
