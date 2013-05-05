@@ -23,8 +23,8 @@
 </head>
 <body>
 	<pre>
-	   New box : SHIFT; DRAG
-	Rotate box : CTRL; DRAG
+	Create box : SHIFT + DRAG
+	Rotate box : CLICK TWICE IN BOCK 
 	</pre>
 <div class="transformer-element"
      style="
@@ -39,17 +39,23 @@
         -transform: matrix(0.9692254790162766, 0.2461746754352872, -0.2461746754352872, 0.9692254790162766, 0, 0);
      "></div>
 
-	<script src="vendor/jquery.js"></script>
-	<!-- script src="vendor/jquery-ui.js"></script -->
 	<script src="vendor/mandox/esprima.js"></script>
 	<script src="vendor/mandox/stacktrace.js"></script>
 	<script src="vendor/mandox/mandox.js"></script>
+	<script src="vendor/jquery.js"></script>
 	<script src="math.js"></script>
 	<script src="transformer.js"></script>
 	<script>
 		(function ($, math, Transformer) {
 			var operation = null;
 			var $selected = null;
+			var start = null;
+			var mode = 'move';
+
+			function set_mode(new_mode) {
+				mode = new_mode;
+				Transformer.style_markers(('move' === mode) ? 'squares' : 'circles');
+			}
 
 			function mouseDownOnMarker(event) {
 				operation = Transformer.start('resize', event, $selected);
@@ -60,13 +66,19 @@
 					cursor: Transformer.VENDOR_PREFIX + '-grabbing',
 					zIndex: 999
 				});
-				var action = event.ctrlKey ? 'rotate' : 'move';
-				operation = Transformer.start(action, event);
-				Transformer.mark(operation[action]);
+				if (!$selected || !$selected.is(event.target)) {
+					set_mode('move');
+					start = null;
+				} else {
+					start = [event.pageX, event.pageY];
+				}
+				operation = Transformer.start(mode, event);
+				Transformer.mark(operation[mode]);
 			}
 
 			function mouseDownOnDocument(event) {
 				if (event.shiftKey) {
+					set_mode('move');
 					operation = Transformer.start(
 						'create',
 						event,
@@ -84,6 +96,14 @@
 						'cursor',
 						'-webkit-grab'
 					);
+
+					var has_moved = !start
+					             || event.pageX !== start[0] 
+					             || event.pageY !== start[1];
+
+					if (!has_moved) {
+						set_mode(('rotate' === mode) ? 'move' : 'rotate');
+					}
 					operation = null;
 				}
 			}

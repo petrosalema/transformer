@@ -22,7 +22,7 @@
 		return '';
 	}(['-webkit', '-moz', '-o']));
 
-	function enableSelection($element) {
+	function enable_selection($element) {
 		($element || $('body')).each(function () {
 			$(this).removeAttr('unselectable', 'on')
 			       .css(VENDOR_PREFIX + '-user-select', 'all');
@@ -31,7 +31,7 @@
 		});
 	}
 
-	function disableSelection($element) {
+	function disable_selection($element) {
 		($element || $('body')).each(function () {
 			$(this).attr('unselectable', 'on')
 			       .css(VENDOR_PREFIX + '-user-select', 'none');
@@ -257,7 +257,7 @@
 	/**
 	 * Gets the given elements rotation.
 	 */
-	function getElementRotation($element) {
+	function get_element_rotation($element) {
 		var matrix = $element.css(VENDOR_PREFIX + '-transform')
 		                     .match(SIGNED_FLOATING_POINT);
 		return matrix ? get_rotation_angle(matrix) : 0;
@@ -325,6 +325,14 @@
 			}
 		};
 	}());
+
+	function style_markers(style) {
+		var radius = ('squares' === style) ? 0 : 8;
+		console.log(radius);
+		$markers.css('border-radius', radius)
+		        .find('>div')
+		        .css('border-radius', radius);
+	}
 
 	/**
 	 * Orientates and shows the given markers around the rotation.
@@ -400,7 +408,7 @@
 	// ---------- `creating ----------
 
 
-	function startCreating(_, x, y, $element) {
+	function start_creating(_, x, y, $element) {
 		$element.css({
 			position: 'absolute',
 			left: x,
@@ -414,7 +422,7 @@
 		}};
 	}
 
-	function updateCreating(operation, x, y) {
+	function update_creating(operation, x, y) {
 		operation.$element.css({
 			width: x - operation.x,
 			height: y - operation.y
@@ -428,8 +436,8 @@
 	/**
 	 * Initializes rotation for the given element at point (x, y).
 	 */
-	function startRotating($element, x, y) {
-		var rotation = getElementRotation($element);
+	function start_rotating($element, x, y) {
+		var rotation = get_element_rotation($element);
 		var bounding = computeBoundingBox($element, rotation);
 		var anchor = [x, y];
 		var origin = computeOrigin(bounding);
@@ -449,7 +457,7 @@
 	/**
 	 * Updates the rotation according to the new coordinates (x, y).
 	 */
-	function updateRotating(operation, x, y) {
+	function update_rotating(operation, x, y) {
 		var theta = math.angular_direction(
 			math.v_subtract([x, y], operation.origin)
 		);
@@ -467,11 +475,11 @@
 	// ---------- `resizing ----------
 
 
-	function startResizing($marker, x, y, $element) {
+	function start_resizing($marker, x, y, $element) {
 		$marker = $marker.closest('.' + MARKER_CLASS);
 		var direction = $marker[0].id.replace('transformer-marker-', '');
 		var offset = $marker.offset();
-		var rotation = getElementRotation($element);
+		var rotation = get_element_rotation($element);
 		var normal = compass[direction] + rotation;
 		return {resize: {
 			$marker: $marker,
@@ -485,7 +493,7 @@
 	}
 
 	// https://en.wikipedia.org/wiki/Vector_projection
-	function updateResizing(operation, x, y) {
+	function update_resizing(operation, x, y) {
 		var delta = [x - operation.start[0], y - operation.start[1]];
 		var direction = operation.direction;
 		var $element = operation.$element;
@@ -524,15 +532,15 @@
 	// ---------- `moving ----------
 
 
-	function startMoving($element, x, y) {
+	function start_moving($element, x, y) {
 		return {move: {
 			$element: $element,
 			position: [x, y],
-			rotation: getElementRotation($element)
+			rotation: get_element_rotation($element)
 		}};
 	}
 
-	function updateMoving(operation, x, y) {
+	function update_moving(operation, x, y) {
 		var offset = operation.$element.offset();
 		var position = [x, y];
 		var current = [offset.left, offset.top];
@@ -548,15 +556,15 @@
 	}
 
 	var operations = {
-		create : startCreating,
-		rotate : startRotating,
-		resize : startResizing,
-		move   : startMoving
+		create : start_creating,
+		rotate : start_rotating,
+		resize : start_resizing,
+		move   : start_moving
 	}
 
 	function start(operation, event, other) {
 		if (operations[operation]) {
-			disableSelection();
+			disable_selection();
 			return operations[operation](
 				$(event.target),
 				event.pageX,
@@ -571,25 +579,25 @@
 		var x = event.pageX;
 		var y = event.pageY;
 		if (operation.create) {
-			updateCreating(operation.create, x, y);
+			update_creating(operation.create, x, y);
 			return operation.create;
 		}
 		if (operation.rotate) {
-			updateRotating(operation.rotate, x, y);
+			update_rotating(operation.rotate, x, y);
 			return operation.rotate;
 		}
 		if (operation.resize) {
-			updateResizing(operation.resize, x, y);
+			update_resizing(operation.resize, x, y);
 			return operation.resize;
 		}
 		if (operation.move) {
-			updateMoving(operation.move, x, y);
+			update_moving(operation.move, x, y);
 			return operation.move;
 		}
 	}
 
 	function end(operation) {
-		enableSelection();
+		enable_selection();
 		return (
 			operation.create
 				|| operation.rotate
@@ -605,24 +613,27 @@
 	 * >--------------------------------------->
 	 */
 	global.Transformer = {
-		startCreating : startCreating,
-		startRotating : startRotating,
-		startResizing : startResizing,
-		startMoving   : startMoving,
+		start_creating : start_creating,
+		start_rotating : start_rotating,
+		start_resizing : start_resizing,
+		start_moving   : start_moving,
 
-		updateCreating : updateCreating,
-		updateRotating : updateRotating,
-		updateResizing : updateResizing,
-		updateMoving   : updateMoving,
+		update_creating : update_creating,
+		update_rotating : update_rotating,
+		update_resizing : update_resizing,
+		update_moving   : update_moving,
 
-		start: start,
-		update: update,
-		end: end,
-		mark: mark,
-		unmark: unmark,
+		start  : start,
+		update : update,
+		end    : end,
 
-		enableSelection: enableSelection,
-		disableSelection: disableSelection,
+		mark   : mark,
+		unmark : unmark,
+
+		style_markers: style_markers,
+
+		enable_selection: enable_selection,
+		disable_selection: disable_selection,
 
 		VENDOR_PREFIX: VENDOR_PREFIX,
 		MARKER_CLASS: MARKER_CLASS
