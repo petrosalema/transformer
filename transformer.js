@@ -302,7 +302,7 @@
 	/**
 	 * Updates the resize cursors of all the marker elements.
 	 */
-	var updateCursors = (function () {
+	var update_cursors = (function () {
 		var cursors = {
 			n  : 'ns-resize',
 			e  : 'ew-resize',
@@ -313,7 +313,7 @@
 			se : 'se-resize',
 			nw : 'nw-resize'
 		};
-		return function updateCursors(orientation) {
+		return function update_cursors(orientation) {
 			var point;
 			for (point in winds) {
 				if (winds.hasOwnProperty(point)) {
@@ -397,7 +397,7 @@
 
 		$pivot.show().css('left', origin[0]).css('top', origin[1]);
 
-		updateCursors(orientation);
+		update_cursors(orientation);
 	}
 
 	/**
@@ -415,7 +415,7 @@
 	// ---------- `creating ----------
 
 
-	function start_creating(_, x, y, $element) {
+	function start_creating($element, x, y) {
 		$element.css({
 			position: 'absolute',
 			left: x,
@@ -482,7 +482,7 @@
 	// ---------- `resizing ----------
 
 
-	function start_resizing($marker, x, y, $element) {
+	function start_resizing($element, x, y, $marker) {
 		$marker = $marker.closest('.' + MARKER_CLASS);
 		var direction = $marker[0].id.replace('transformer-marker-', '');
 		var offset = $marker.offset();
