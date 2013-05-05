@@ -1,48 +1,27 @@
 /* Transformer.js | (c) 2013 Petro Salema | petrosalema.github.io/transformer */
 // euclidean.js
-(function Transformer(global, math, $) {
+(function Transformer(global, mandox, math, $) {
 	'use strict';
 
-	if (typeof mandox !== 'undefined') {
+	if (mandox) {
 		eval(uate)('tranformer.js');
 	}
 
-	(function showGrid() {
-		var size = 50;
-		var w = $(window).width() + size;
-		var h = $(window).height() + size;
-		var rows = Math.ceil(h / size);
-		var cols = Math.ceil(w / size);
+	/**
+	 * The vendor prefix string for the host rendering engine.
+	 *
+	 * @type {string}
+	 */
+	var VENDOR_PREFIX = (function (prefixes) {
+		var $element = $('<div></div');
 		var i;
-		$('.transformer-grid-line').remove();
-		for (i = 0; i < rows; i++) {
-			$('<div class="transformer-grid-line"></div>').css({
-				position: 'absolute',
-				borderTop: '1px dashed rgba(0,0,0,0.1)',
-				width: w,
-				height: 1,
-				left: 0,
-				top: size * i
-			}).appendTo('body');
-		}
-		for (i = 0; i < cols; i++) {
-			$('<div class="transformer-grid-line"></div>').css({
-				position: 'absolute',
-				borderLeft: '1px dashed rgba(0,0,0,0.1)',
-				width: 1,
-				height: h,
-				left: size * i,
-				top: 0
-			}).appendTo('body');
-		}
-		var timer;
-		$(window).resize(function () {
-			if (timer) {
-				clearTimeout(timer);
+		for (i = 0; i < prefixes.length; i++) {
+			if (typeof $element.css(prefixes[i] + '-transform') !== 'undefined') {
+				return prefixes[i];
 			}
-			timer = setTimeout(showGrid, 200);
-		});
-	}());
+		}
+		return '';
+	}(['-webkit', '-moz', '-o']));
 
 	function enableSelection($element) {
 		($element || $('body')).each(function () {
@@ -62,21 +41,12 @@
 		});
 	}
 
-	var VENDOR_PREFIX = (function (prefixes) {
-		var $element = $('<div></div');
-		var i;
-		for (i = 0; i < prefixes.length; i++) {
-			if (typeof $element.css(prefixes[i] + '-transform') !== 'undefined') {
-				return prefixes[i];
-			}
-		}
-		return '';
-	}(['-webkit', '-moz', '-o']));
-
 	/**
 	 * Angles of the 16-point compass rose.
 	 *
 	 * Reference: https://en.wikipedia.org/wiki/Compass_rose
+	 *
+	 * @type {object<string, number}
 	 */
 	var compass = (function () {
 		var eigth = 45;
@@ -225,7 +195,9 @@
 	 * http://www.w3.org/TR/SVG/coords.html#TransformMatrixDefined
 	 * http://www.useragentman.com/IETransformTranslator/
 	 * http://dev.opera.com/articles/view/understanding-the-css-transforms-matrix/#calculatingtransform
+	 * https://developer.mozilla.org/en-US/docs/CSS/trasnform
 	 * http://en.wikipedia.org/wiki/Coordinate_rotation
+	 * http://en.wikipedia.org/wiki/Transformation_matrix
 	 */
 	function css_transformation_matrix(operation) {
 		var matrix = STANDARD_BASIS;
@@ -262,8 +234,10 @@
 	 *
 	 * Reference:
 	 * http://stackoverflow.com/questions/4361242/extract-rotation-scale-values-from-2d-transformation-matrix
+	 *
+	 * @todo: parseFloat()
 	 */
-	function m_get_rotation_angle(matrix) {
+	function get_rotation_angle(matrix) {
 		var rotation = Math.atan(matrix[1] / matrix[3]);
 
 		// Because singularities exists at multiples of 90°.  This means that
@@ -279,24 +253,12 @@
 	}
 
 	/**
-	 * References:
-	 * http://en.wikipedia.org/wiki/Transformation_matrix
-	 * https://developer.mozilla.org/en-US/docs/CSS/trasnform
-	 *
-	 * http://en.wikipedia.org/wiki/Standard_basis
-	 * The standard basis forht Euclidean plan is
-	 * ex = (1,0)
-	 * ey = (0,1)
-	 *
-	 * http://stackoverflow.com/questions/4361242/extract-rotation-scale-values-from-2d-transformation-matrix
-	 * http://snipt.org/ugar9
-	 * https://en.wikipedia.org/wiki/Rotation_matrix#Euler_angles
+	 * Gets the given elements rotation.
 	 */
-
 	function getElementRotation($element) {
 		var matrix = $element.css(VENDOR_PREFIX + '-transform')
 		                     .match(SIGNED_FLOATING_POINT);
-		return matrix ? m_get_rotation_angle(matrix) : 0;
+		return matrix ? get_rotation_angle(matrix) : 0;
 	}
 
 	function getDirectionVector(angle) {
@@ -469,7 +431,7 @@
 	 */
 	function startRotating(element, x, y) {
 		disableSelection();
-		var $element = $(element).css('cursor', VENDOR_PREFIX + '-grabbing');
+		var $element = $(element);
 		var rotation = getElementRotation($element);
 		var bounding = computeBoundingBox($element, rotation);
 		var anchor = [x, y];
@@ -509,7 +471,6 @@
 	 * and hides boundingbox, pivot, and markers.
 	 */
 	function endRotating(operation) {
-		operation.$element.css('cursor', '-webkit-grab');
 		return operation.$element;
 	}
 
@@ -626,6 +587,8 @@
 
 		enableSelection: enableSelection,
 		disableSelection: disableSelection,
+
+		VENDOR_PREFIX: VENDOR_PREFIX
 	};
 
-}(window, window.MathUtil, window.jQuery));
+}(window, window.mandox, window.MathUtil, window.jQuery));

@@ -1,6 +1,11 @@
-(function (global) {
+(function (global, mandox) {
 	'use strict';
 
+	if (mandox) {
+		eval(uate)('math.js');
+	}
+
+	// TODO: Conside using precalculated tables for faster operation:
 	// http://svn.apache.org/viewvc/commons/proper/math/trunk/src/main/java/org/apache/commons/math3/util/FastMath.java?view=markup
 
 	function ASSERT(condition, message) {
@@ -344,22 +349,6 @@
 				[0,                 0,                 1]
 			));
 	}
-
-	/*
-	var A = m_matrix([6, 3, 0],
-	                 [2, 5, 1],
-					 [9, 8, 6]);
-	var B = m_matrix([7, 4],
-	                 [6, 7],
-					 [5, 0]);
-	console.log(A.toString(true));
-	console.log(B.toString(true));
-	console.log(m_multiply(A, B).toString(true));
-	| 60   45 |
-	| 49   43 |
-	| 141  92 | 
-	*/
-
 
 	global.MathUtil = {
 

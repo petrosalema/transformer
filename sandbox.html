@@ -50,6 +50,10 @@
 
 			function mouseDownOnElement($event) {
 				if ($event.ctrlKey) {
+					$($event.target).css(
+						'cursor',
+						Transformer.VENDOR_PREFIX + '-grabbing'
+					);
 					operation = Transformer.startRotating(
 						$event.target,
 						$event.pageX,
@@ -70,6 +74,7 @@
 			function mouseUpOnDocument($event) {
 				if (operation) {
 					$selected = Transformer.end(operation);
+					$selected.css('cursor', '-webkit-grab');
 					operation = null;
 				}
 			}
@@ -92,7 +97,44 @@
 			    .on('mouseup', mouseUpOnDocument)
 			    .on('mousemove', mouseMoveOnDocument)
 			    .on('mousedown', '.transformer-element', mouseDownOnElement)
-			    .on('mousedown', '.transformer-marker', mouseDownOnMarker)
+			    .on('mousedown', '.transformer-marker', mouseDownOnMarker);
+
+			(function show_grid() {
+				var size = 50;
+				var w = $(window).width() + size;
+				var h = $(window).height() + size;
+				var rows = Math.ceil(h / size);
+				var cols = Math.ceil(w / size);
+				var i;
+				$('.transformer-grid-line').remove();
+				for (i = 0; i < rows; i++) {
+					$('<div class="transformer-grid-line"></div>').css({
+						position: 'absolute',
+						borderTop: '1px dashed rgba(0,0,0,0.1)',
+						width: w,
+						height: 1,
+						left: 0,
+						top: size * i
+					}).appendTo('body');
+				}
+				for (i = 0; i < cols; i++) {
+					$('<div class="transformer-grid-line"></div>').css({
+						position: 'absolute',
+						borderLeft: '1px dashed rgba(0,0,0,0.1)',
+						width: 1,
+						height: h,
+						left: size * i,
+						top: 0
+					}).appendTo('body');
+				}
+				var timer;
+				$(window).resize(function () {
+					if (timer) {
+						clearTimeout(timer);
+					}
+					timer = setTimeout(show_grid, 200);
+				});
+			}());
 		}(jQuery));
 	</script>
 </body>
