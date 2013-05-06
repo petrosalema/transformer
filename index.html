@@ -4,20 +4,45 @@
 	<meta charset="UTF-8">
 	<link href="transformer.css" type="text/css" rel="stylesheet" />
 	<style> 
+		@font-face {
+			font-family: 'proxima-nova';
+			font-weight: 700;
+			font-style: normal;
+			src: url('http://chapel.at:8080/static/fonts/proximanova-bold-webfont.eot');
+			src: url('http://chapel.at:8080/static/fonts/proximanova-bold-webfont.woff') format('woff'),
+				 url('http://chapel.at:8080/static/fonts/proximanova-bold-webfont.eot?#iefix') format('embedded-opentype'),
+				 url('http://chapel.at:8080/static/fonts/proximanova-bold-webfont.ttf') format('truetype'),
+				 url('http://chapel.at:8080/static/fonts/proximanova-bold-webfont.svg#ProximaNova') format('svg');
+		}
 		body {
 			padding: 0;
 			margin: 0;
+			background-color: #222;
+			background-image: url(http://pcdn.500px.net/33177655/2e8805590feed907a839d2f7fb0342b426fc8ad0/4.jpg);
+			background-size: cover;
+			color: #fff;
 		}
-		.transformer-element {
+		.box {
 			cursor: -webkit-grab;
 			overflow: hidden;
 			position: absolute;
 			text-align: center;
-			border: 1px solid rgba(0,0,0,0.2);
+			font-size: 50px;
+			color: #fff;
+			font-family: 'proxima-nova';
+			font-weight: bold;
+			text-shadow: 1px 1px 4px rgba(0,0,0,0.5);
 			word-wrap: break-word;
-			/* -webkit-user-modify: read-write; */
 			-webkit-nbsp-mode: space;
-			-webkit-line-break: after-white-space	
+			-webkit-line-break: after-white-space;
+		}
+		.box.selected {
+			cursor: Transformer.VENDOR_PREFIX + '-grabbing';
+			z-index: 999;
+			outline: 2px solid rgba(0, 168, 219, 0.4);
+		}
+		.box.editable {
+			-webkit-user-modify: read-write;
 		}
 	</style>
 </head>
@@ -25,8 +50,9 @@
 	<pre>
 	Create box : SHIFT + DRAG
 	Rotate box : CLICK TWICE IN BOCK 
+	Double click : TO EDIT
 	</pre>
-<div class="transformer-element"
+<div class="box"
      style="
         position: absolute;
         left: 200px;
@@ -37,7 +63,7 @@
         -moz-transform: matrix(0.9692254790162766, 0.2461746754352872, -0.2461746754352872, 0.9692254790162766, 0, 0);
         -o-transform: matrix(0.9692254790162766, 0.2461746754352872, -0.2461746754352872, 0.9692254790162766, 0, 0);
         -transform: matrix(0.9692254790162766, 0.2461746754352872, -0.2461746754352872, 0.9692254790162766, 0, 0);
-     "></div>
+     ">You can transform me!</div>
 
 	<script src="vendor/mandox/esprima.js"></script>
 	<script src="vendor/mandox/stacktrace.js"></script>
@@ -54,7 +80,14 @@
 
 			function set_mode(new_mode) {
 				mode = new_mode;
-				Transformer.style_markers(('move' === mode) ? 'squares' : 'circles');
+				switch (mode) {
+					case 'move':
+					return Transformer.style_markers('squares');
+					case 'rotate':
+					return Transformer.style_markers('circles');
+					default:
+					return Transformer.unmark();
+				}
 			}
 
 			function mouseDownOnMarker(event) {
@@ -64,23 +97,22 @@
 					operation = Transformer.start('rotate', event);
 				} else {
 					operation = Transformer.start('resize', event, $marker);
-					var cursor = $marker.css('cursor');
-					$selected.css('cursor', cursor);
-					$('body').css('cursor', cursor);
+					$selected.add('body').css('cursor', $marker.css('cursor'));
 				}
 			}
 
 			function mouseDownOnElement(event) {
-				$(event.target).css({
-					cursor: Transformer.VENDOR_PREFIX + '-grabbing',
-					zIndex: 999
-				});
 				if (!$selected || !$selected.is(event.target)) {
+					$('.selected').removeClass('selected');
 					set_mode('move');
 					start = null;
 				} else {
+					if ('edit' === mode) {
+						return;
+					}
 					start = [event.pageX, event.pageY];
 				}
+				$(event.target).addClass('selected');
 				operation = Transformer.start(mode, event);
 				Transformer.mark(operation[mode]);
 			}
@@ -88,11 +120,14 @@
 			function mouseDownOnDocument(event) {
 				if (event.shiftKey) {
 					set_mode('move');
-					event.target = $('<div class="transformer-element"></div>').appendTo('body');
+					event.target = $('<div class="box"></div>').appendTo('body');
 					operation = Transformer.start('create', event);
 				}
-				if (0 === $(event.target).closest('.transformer-element,.' + Transformer.MARKER_CLASS).length) {
-					Transformer.unmark(operation);
+				if (0 === $(event.target).closest('.box,.' + Transformer.MARKER_CLASS).length) {
+					Transformer.unmark();
+					if ($selected) {
+						$selected.removeClass('selected').removeClass('editable');
+					}
 					$selected = null;
 				}
 			}
@@ -100,14 +135,14 @@
 			function mouseUpOnDocument(event) {
 				if (operation) {
 					$selected = Transformer.end(operation).$element.css(
-						'cursor',
-						'-webkit-grab'
+					'cursor',
+					'-webkit-grab'
 					);
 					$('body').css('cursor', '');
 
 					var has_moved = !start
-					             || event.pageX !== start[0] 
-					             || event.pageY !== start[1];
+					|| event.pageX !== start[0]
+					|| event.pageY !== start[1];
 
 					if (!has_moved) {
 						set_mode(('rotate' === mode) ? 'move' : 'rotate');
@@ -122,12 +157,20 @@
 				}
 			}
 
+			function dblClickOnElement(event) {
+				if ('edit' !== mode) {
+					set_mode('edit');
+					$(event.target).addClass('editable');
+				}
+			}
+
 			$(document)
 				.on('mousedown', mouseDownOnDocument)
 			    .on('mouseup', mouseUpOnDocument)
 			    .on('mousemove', mouseMoveOnDocument)
-			    .on('mousedown', '.transformer-element', mouseDownOnElement)
-			    .on('mousedown', '.' + Transformer.MARKER_CLASS, mouseDownOnMarker);
+			    .on('mousedown', '.' + Transformer.MARKER_CLASS, mouseDownOnMarker)
+			    .on('mousedown', '.box', mouseDownOnElement)
+			    .on('dblclick', '.box', dblClickOnElement);
 
 			(function show_grid() {
 				var size = 50;
@@ -167,5 +210,8 @@
 			}());
 		}(jQuery, MathUtil, Transformer));
 	</script>
+	<!--
+	(</>).aloha(<})
+	-->
 </body>
 </html>
