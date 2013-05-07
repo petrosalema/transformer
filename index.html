@@ -3,31 +3,23 @@
 	<title>Transformer.js &bull; Sandbox</title>
 	<meta charset="UTF-8">
 	<link href="transformer.css" type="text/css" rel="stylesheet" />
-	<link rel="stylesheet"
+	<!-- link rel="stylesheet"
 	      type="text/css"
 	      href="http://alohaeditor.org/builds/stable/alohaeditor-0.23.4/aloha/css/aloha.css">
 	<script data-aloha-plugins="common/ui,common/format"
-	        src="http://alohaeditor.org/builds/stable/alohaeditor-0.23.4/aloha/lib/aloha-full.js"></script>
+	        src="http://alohaeditor.org/builds/stable/alohaeditor-0.23.4/aloha/lib/aloha-full.js"></script-->
 	<style> 
 		@font-face {
 			font-family: 'proxima-nova';
 			font-weight: bold;
 			font-style: normal;
-			src: url('http://chapel.at:8080/static/fonts/proximanova-bold-webfont.eot');
-			src: url('http://chapel.at:8080/static/fonts/proximanova-bold-webfont.woff') format('woff'),
-			     url('http://chapel.at:8080/static/fonts/proximanova-bold-webfont.eot?#iefix') format('embedded-opentype'),
-			     url('http://chapel.at:8080/static/fonts/proximanova-bold-webfont.ttf') format('truetype'),
-			     url('http://chapel.at:8080/static/fonts/proximanova-bold-webfont.svg#ProximaNova') format('svg');
+			src: url('proximanova-bold-webfont.woff') format('woff');
 		}
 		@font-face {
 			font-family: 'proxima-nova';
 			font-weight: normal;
 			font-style: normal;
-			src: url('http://chapel.at:8080/static/fonts/proximanova-regular-webfont.eot');
-			src: url('http://chapel.at:8080/static/fonts/proximanova-regular-webfont.woff') format('woff'),
-			     url('http://chapel.at:8080/static/fonts/proximanova-regular-webfont.eot?#iefix') format('embedded-opentype'),
-			     url('http://chapel.at:8080/static/fonts/proximanova-regular-webfont.ttf') format('truetype'),
-			     url('http://chapel.at:8080/static/fonts/proximanova-regular-webfont.svg#ProximaNova') format('svg');
+			src: url('proximanova-regular-webfont.woff') format('woff');
 		}
 		body {
 			padding: 0;
@@ -35,7 +27,7 @@
 			color: #fff;
 			text-shadow: 1px 1px 1px rgba(0,0,0,0.2);
 			background-color: whiteSmoke;
-			background-image: url(http://pcdn.500px.net/33177655/2e8805590feed907a839d2f7fb0342b426fc8ad0/4.jpg);
+			background-image: url(bg.jpg);
 			background-size: cover;
 		}
 		.box {
@@ -60,7 +52,7 @@
 		.box.editing.aloha-editable-active[contenteditable=true]:focus {
 			cursor: text;
 			outline: 6px solid rgba(0, 168, 219, 0.2) !important;
-			/* -webkit-user-modify: read-write; */
+			-webkit-user-modify: read-write;
 		}
 		.box.vertical-editing {
 			cursor: vertical-text;
@@ -73,6 +65,16 @@
 		.box p {
 			margin: 0;
 			padding: 0;
+		}
+		.box.highlight {
+			box-shadow: 0 0 30px rgba(0, 168, 219, 0.6);
+		}
+		#canvas {
+			top: 0;
+			left: 0;
+			position: absolute;
+			width: 100%;
+			height: 100%;
 		}
 	</style>
 </head>
@@ -89,7 +91,7 @@
 	<div class="box" style="font-size: 50px; position: absolute; left: 325px; top: 190px; width: 151px; height: 59px; -webkit-transform: matrix(0.9969344062647705, -0.07824186606612615, 0.07824186606612615, 0.9969344062647705, 0, 0);">
 		<b>b<u>a</u>m</b>!!<i>!</i></div>
 	<div class="box" style="font-size: 50px; position: absolute; left: 289px; top: 249px; width: 181px; height: 49px; -webkit-transform: matrix(0.9315010596682407, 0.36373860921951173, -0.36373860921951173, 0.9315010596682407, 0, 0);">
-		<b>B<i>O</i>(•)M<i>!</i></b></div>
+		<b>B<i>O(</i>•)M<i>!</i></b></div>
 </div>
 
 	<script src="vendor/mandox/esprima.js"></script>
@@ -100,11 +102,16 @@
 	<script src="transformer.js"></script>
 
 	<script>
+		var Aloha = {};
+		$.fn.aloha = function () {return this};
+		/*
 		Aloha.require([
 			'aloha',
 			'aloha/jquery',
 			'aloha/copypaste',
-		], function (Aloha, $, CopyPaste) {
+		], function (Aloha, $, copy_paste) {
+		*/
+		(function () {
 			$('.box').aloha();
 			var math = MathUtil;
 			var operation = null;
@@ -144,15 +151,15 @@
 						$element.addClass('vertical-editing');
 					}
 					if (Aloha.activeEditable) {
-						CopyPaste.selectAllOf(Aloha.activeEditable.obj[0]);
+						copy_paste.selectAllOf(Aloha.activeEditable.obj[0]);
 					}
-					return Transformer.unmark();
+					return Transformer.mark(operation);
 				default:
 					return Transformer.unmark();
 				}
 			}
 
-			function mouseDownOnMarker(event) {
+			function mousedown_on_marker(event) {
 				if ('rotate' === mode) {
 					operation = Transformer.start('rotate', $selected, event);
 				} else {
@@ -166,7 +173,7 @@
 				return $(element).closest('.box');
 			}
 
-			function mouseDownOnElement(event) {
+			function mousedown_on_element(event) {
 				var $element = get_box(event.target);
 				var is_same_element = $element.is($selected);
 
@@ -191,9 +198,9 @@
 				$selected = $element;
 			}
 
-			function mouseDownOnDocument(event) {
+			function mousedown_on_document(event) {
 				if (event.shiftKey && event.ctrlKey) {
-					var $element = $('<div class="box"></div>').aloha().appendTo('#canvas');
+					var $element = $('<div class="box"></div>').aloha().appendTo(event.target);
 					event.target = $element[0];
 					change_mode('move', $element);
 					operation = Transformer.start('create', $element, event);
@@ -204,7 +211,7 @@
 				}
 			}
 
-			function mouseUpOnDocument(event) {
+			function mouseup_on_document(event) {
 				if (operation) {
 					var $element = Transformer.end(operation).$element;
 
@@ -236,7 +243,7 @@
 				}
 			}
 
-			function mouseMoveOnDocument(event) {
+			function mousemove_on_document(event) {
 				if (!operation) {
 					return;
 				}
@@ -254,19 +261,58 @@
 				}
 			}
 
-			function dblClickOnElement(event) {
+			function dblclick_on_element(event) {
 				if ('edit' !== mode) {
 					change_mode('edit', get_box(event.target));
 				}
 			}
 
+			var $highlit;
+			function key_down(event) {
+				if (event.ctrlKey) {
+					$highlit = $('.box').addClass('highlight');
+				}
+				if ($selected) {
+					switch (event.keyCode) {
+					case 8:  // BACK
+					case 46: // DEL
+						$selected.remove();
+						$selected = null;
+						change_mode(null);
+						return Transformer.unmark();
+					case 18: // X
+						if (event.ctrlKey) {
+							$selected.remove();
+							$selected = null;
+							change_mode(null);
+							break;
+						}
+						return Transformer.unmark();
+					case 27: // ESC
+						operation = null;
+						$selected = null;
+						change_mode(null);
+						return Transformer.unmark();
+					}
+				}
+			}
+
+			function key_up(event) {
+				if ($highlit) {
+					$highlit.removeClass('highlight');
+					$highlit = null;
+				}
+			}
+
 			$(document)
-				.on('mousedown', mouseDownOnDocument)
-			    .on('mouseup', mouseUpOnDocument)
-			    .on('mousemove', mouseMoveOnDocument)
-			    .on('mousedown', '.' + Transformer.MARKER_CLASS, mouseDownOnMarker)
-			    .on('mousedown', '.box', mouseDownOnElement)
-			    .on('dblclick', '.box', dblClickOnElement);
+				.on('mousedown', mousedown_on_document)
+				.on('mouseup', mouseup_on_document)
+				.on('mousemove', mousemove_on_document)
+				.on('mousedown', '.' + Transformer.MARKER_CLASS, mousedown_on_marker)
+				.on('mousedown', '.box', mousedown_on_element)
+				.on('dblclick', '.box', dblclick_on_element)
+				.on('keydown', key_down)
+				.on('keyup', key_up);
 
 			(function show_grid() {
 				var size = 20;
@@ -304,7 +350,7 @@
 					timer = setTimeout(show_grid, 200);
 				});
 			}());
-		});
+		}());
 	</script>
 	<!--
 	(</>).aloha(<3)
