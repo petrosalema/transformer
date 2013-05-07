@@ -276,8 +276,8 @@
 	 *
 	 * Reference: https://en.wikipedia.org/wiki/Cardinal_direction
 	 */
-	var rotateDirection = (function () {
-		return function rotateDirection(point, angle) {
+	var get_compass_direction = (function () {
+		return function get_compass_direction(point, angle) {
 			angle = math.normalize_angle(angle + compass[point]);
 			return ((angle < compass.nne)
 				? 'n'
@@ -319,7 +319,10 @@
 				if (winds.hasOwnProperty(point)) {
 					winds[point].css(
 						'cursor',
-						cursors[rotateDirection(point, orientation.rotation)]
+						cursors[get_compass_direction(
+							point,
+							orientation.rotation
+						)]
 					);
 				}
 			}
@@ -638,6 +641,9 @@
 		unmark : unmark,
 
 		style_markers: style_markers,
+
+		get_element_rotation: get_element_rotation,
+		get_compass_direction: get_compass_direction,
 
 		enable_selection: enable_selection,
 		disable_selection: disable_selection,

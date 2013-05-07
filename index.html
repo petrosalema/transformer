@@ -10,17 +10,18 @@
 			font-style: normal;
 			src: url('http://chapel.at:8080/static/fonts/proximanova-bold-webfont.eot');
 			src: url('http://chapel.at:8080/static/fonts/proximanova-bold-webfont.woff') format('woff'),
-				 url('http://chapel.at:8080/static/fonts/proximanova-bold-webfont.eot?#iefix') format('embedded-opentype'),
-				 url('http://chapel.at:8080/static/fonts/proximanova-bold-webfont.ttf') format('truetype'),
-				 url('http://chapel.at:8080/static/fonts/proximanova-bold-webfont.svg#ProximaNova') format('svg');
+			     url('http://chapel.at:8080/static/fonts/proximanova-bold-webfont.eot?#iefix') format('embedded-opentype'),
+			     url('http://chapel.at:8080/static/fonts/proximanova-bold-webfont.ttf') format('truetype'),
+			     url('http://chapel.at:8080/static/fonts/proximanova-bold-webfont.svg#ProximaNova') format('svg');
 		}
 		body {
 			padding: 0;
 			margin: 0;
-			background-color: #222;
+			background-color: whiteSmoke;
 			background-image: url(http://pcdn.500px.net/33177655/2e8805590feed907a839d2f7fb0342b426fc8ad0/4.jpg);
 			background-size: cover;
 			color: #fff;
+			text-shadow: 1px 1px 1px rgba(0,0,0,0.2);
 		}
 		.box {
 			cursor: -webkit-grab;
@@ -31,18 +32,26 @@
 			color: #fff;
 			font-family: 'proxima-nova';
 			font-weight: bold;
-			text-shadow: 1px 1px 4px rgba(0,0,0,0.5);
+			text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
 			word-wrap: break-word;
 			-webkit-nbsp-mode: space;
 			-webkit-line-break: after-white-space;
 		}
 		.box.selected {
-			cursor: Transformer.VENDOR_PREFIX + '-grabbing';
 			z-index: 999;
 			outline: 2px solid rgba(0, 168, 219, 0.4);
 		}
-		.box.editable {
+		.box.editing {
+			cursor: text;
 			-webkit-user-modify: read-write;
+			outline: 6px solid rgba(0, 168, 219, 0.2);
+		}
+		.box.vertical-editing {
+			cursor: vertical-text;
+		}
+		.box.moving,
+		.box.rotating {
+			cursor: -webkit-grabbing;
 		}
 	</style>
 </head>
@@ -50,20 +59,14 @@
 	<pre>
 	Create box : SHIFT + DRAG
 	Rotate box : CLICK TWICE IN BOCK 
-	Double click : TO EDIT
+	  Edit box : DOUBLE CLICK
 	</pre>
-<div class="box"
-     style="
-        position: absolute;
-        left: 200px;
-        top: 100px;
-        width: 255px;
-        height: 231px;
-        -webkit-transform: matrix(0.9692254790162766, 0.2461746754352872, -0.2461746754352872, 0.9692254790162766, 0, 0);
-        -moz-transform: matrix(0.9692254790162766, 0.2461746754352872, -0.2461746754352872, 0.9692254790162766, 0, 0);
-        -o-transform: matrix(0.9692254790162766, 0.2461746754352872, -0.2461746754352872, 0.9692254790162766, 0, 0);
-        -transform: matrix(0.9692254790162766, 0.2461746754352872, -0.2461746754352872, 0.9692254790162766, 0, 0);
-     ">You can transform me!</div>
+
+<div id="canvas">
+<div class="box" style="position: absolute; left: 322.7222595214844px; top: 152.0985107421875px; width: 115.32727406604766px; height: 67.32727406604778px; -webkit-transform: matrix(0.9388332076832455, 0.34437219421897003, -0.34437219421897003, 0.9388332076832455, 0, 0);">b!ff</div>
+<div class="box" style="position: absolute; left: 321px; top: 190px; width: 151px; height: 59px; -webkit-transform: matrix(0.9969344062647705, -0.07824186606612615, 0.07824186606612615, 0.9969344062647705, 0, 0);">bam!!!</div>
+<div class="box" style="position: absolute; left: 289px; top: 249px; width: 181px; height: 49px; -webkit-transform: matrix(0.9315010596682407, 0.36373860921951173, -0.36373860921951173, 0.9315010596682407, 0, 0);">BO•M!</div>
+</div>
 
 	<script src="vendor/mandox/esprima.js"></script>
 	<script src="vendor/mandox/stacktrace.js"></script>
@@ -71,6 +74,7 @@
 	<script src="vendor/jquery.js"></script>
 	<script src="math.js"></script>
 	<script src="transformer.js"></script>
+
 	<script>
 		(function ($, math, Transformer) {
 			var operation = null;
@@ -78,14 +82,40 @@
 			var start = null;
 			var mode = 'move';
 
-			function set_mode(new_mode) {
+			function clear_element($element) {
+				return $element.css('cursor', '')
+				               .removeClass('moving')
+				               .removeClass('editing')
+				               .removeClass('vertical-editing')
+				               .removeClass('resizing')
+				               .removeClass('rotating')
+							   .removeClass('selected');
+			}
+
+			function change_mode(new_mode, element) {
 				mode = new_mode;
+
+				clear_element($('.selected'));
+				var $element = $(element).addClass('selected');
+
 				switch (mode) {
-					case 'move':
+				case 'move':
 					return Transformer.style_markers('squares');
-					case 'rotate':
+				case 'resize':
+					$element.addClass('resizing');
+					return Transformer.style_markers('squares');
+				case 'rotate':
 					return Transformer.style_markers('circles');
-					default:
+				case 'edit':
+					$element.addClass('editing');
+					var angle = Transformer.get_element_rotation($element);
+					var direction = Transformer.get_compass_direction('n', angle);
+					if ('w' === direction || 'e' === direction) {
+						console.log('v');
+						$element.addClass('vertical-editing');
+					}
+					return Transformer.unmark();
+				default:
 					return Transformer.unmark();
 				}
 			}
@@ -102,65 +132,96 @@
 			}
 
 			function mouseDownOnElement(event) {
-				if (!$selected || !$selected.is(event.target)) {
-					$('.selected').removeClass('selected');
-					set_mode('move');
+				var $element = $(event.target);
+				var is_same_element = $element.is($selected);
+
+				if (is_same_element && 'edit' === mode) {
+					return;
+				}
+
+				if (!is_same_element) {
+					mode = 'move';
 					start = null;
 				} else {
-					if ('edit' === mode) {
-						return;
-					}
 					start = [event.pageX, event.pageY];
 				}
-				$(event.target).addClass('selected');
+
+				change_mode(mode, $element);
 				operation = Transformer.start(mode, event);
 				Transformer.mark(operation[mode]);
+
+				$('.' + Transformer.MARKER_CLASS)
+					.css('cursor', 'rotate' === mode ? 'default' : '');
+
+				$selected = $element;
 			}
 
 			function mouseDownOnDocument(event) {
 				if (event.shiftKey) {
-					set_mode('move');
-					event.target = $('<div class="box"></div>').appendTo('body');
+					var $element = $('<div class="box"></div>').appendTo('#canvas');
+					event.target = $element[0];
+					change_mode('move', $element);
 					operation = Transformer.start('create', event);
 				}
 				if (0 === $(event.target).closest('.box,.' + Transformer.MARKER_CLASS).length) {
-					Transformer.unmark();
-					if ($selected) {
-						$selected.removeClass('selected').removeClass('editable');
-					}
+					change_mode(null);
 					$selected = null;
 				}
 			}
 
 			function mouseUpOnDocument(event) {
 				if (operation) {
-					$selected = Transformer.end(operation).$element.css(
-					'cursor',
-					'-webkit-grab'
-					);
+					var $element = Transformer.end(operation).$element;
+
 					$('body').css('cursor', '');
 
-					var has_moved = !start
-					|| event.pageX !== start[0]
-					|| event.pageY !== start[1];
+					clear_element($element).addClass('selected');
+
+					var has_moved = !start || event.pageX !== start[0]
+					                       || event.pageY !== start[1];
 
 					if (!has_moved) {
-						set_mode(('rotate' === mode) ? 'move' : 'rotate');
+						change_mode(
+							('rotate' === mode) ? 'move' : 'rotate',
+							$element
+						);
 					}
+
+					if ('rotate' === mode) {
+						$('.' + Transformer.MARKER_CLASS).css('cursor', 'default');
+					} else {
+						Transformer.mark(
+							operation.move
+								|| operation.resize
+									|| operation.rotate
+						);
+					}
+
 					operation = null;
 				}
 			}
 
 			function mouseMoveOnDocument(event) {
-				if (operation) {
-					Transformer.mark(Transformer.update(operation, event));
+				if (!operation) {
+					return;
+				}
+
+				Transformer.mark(Transformer.update(operation, event));
+
+				var $element = operation.move
+				             ? operation.move.$element.addClass('moving')
+				             : operation.rotate
+				             ? operation.rotate.$element.addClass('rotating')
+				             : null;
+
+				if ($element) {
+					$('body').css('cursor', $element.css('cursor'));
 				}
 			}
 
 			function dblClickOnElement(event) {
 				if ('edit' !== mode) {
-					set_mode('edit');
-					$(event.target).addClass('editable');
+					change_mode('edit', event.target);
 				}
 			}
 
@@ -183,7 +244,7 @@
 				for (i = 0; i < rows; i++) {
 					$('<div class="transformer-grid-line"></div>').css({
 						position: 'absolute',
-						borderTop: '1px dashed rgba(0,0,0,0.1)',
+						borderTop: '1px dashed rgba(255,255,255,0.1)',
 						width: w,
 						height: 1,
 						left: 0,
@@ -193,7 +254,7 @@
 				for (i = 0; i < cols; i++) {
 					$('<div class="transformer-grid-line"></div>').css({
 						position: 'absolute',
-						borderLeft: '1px dashed rgba(0,0,0,0.1)',
+						borderLeft: '1px dashed rgba(255,255,255,0.1)',
 						width: 1,
 						height: h,
 						left: size * i,
@@ -211,7 +272,7 @@
 		}(jQuery, MathUtil, Transformer));
 	</script>
 	<!--
-	(</>).aloha(<})
+	(</>).aloha(<3)
 	-->
 </body>
 </html>
