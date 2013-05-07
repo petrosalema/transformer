@@ -78,7 +78,7 @@
 </head>
 <body>
 	<pre>
-	Create box : SHIFT + DRAG
+	Create box : CTRL + SHIFT + DRAG
 	Rotate box : CLICK TWICE IN BOCK 
 	  Edit box : DOUBLE CLICK
 	</pre>
@@ -192,7 +192,7 @@
 			}
 
 			function mouseDownOnDocument(event) {
-				if (event.shiftKey) {
+				if (event.shiftKey && event.ctrlKey) {
 					var $element = $('<div class="box"></div>').aloha().appendTo('#canvas');
 					event.target = $element[0];
 					change_mode('move', $element);
