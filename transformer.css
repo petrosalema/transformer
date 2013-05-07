@@ -67,3 +67,8 @@
 	position: absolute;
 	outline: 4px solid rgba(0, 168, 219, 0.1);
 }
+
+#transformer-marker-sw,
+#transformer-marker-nw,
+#transformer-marker-se,
+#transformer-marker-ne { display: none !important; }

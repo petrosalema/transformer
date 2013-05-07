@@ -572,11 +572,11 @@
 		move   : start_moving
 	};
 
-	function start(operation, event, other) {
+	function start(operation, $element, event, other) {
 		if (operations[operation]) {
 			disable_selection();
 			return operations[operation](
-				$(event.target),
+				$element,
 				event.pageX,
 				event.pageY,
 				other
