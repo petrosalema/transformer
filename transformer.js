@@ -181,13 +181,16 @@
 	 * Calculates the dimensions of a bounding box for the given element when
 	 * orientated according to the specified angle.
 	 *
+	 * Consider use: getBoundingClientRect()
+	 * http://www.quirksmode.org/dom/w3c_cssom.html#t21
+	 *
 	 * Reference: http://www.codalicio.us/2011/01/how-to-determine-bounding-rectangle-of.html
 	 *
 	 * @param {jQuery.<HTMLElement>}
 	 * @param {number} angle
 	 * @returns {Array.<number>} [x, y, w, h]
 	 */
-	function computeBoundingBox($element, angle) {
+	function compute_bounding_box($element, angle) {
 		var w = $element.outerWidth();
 		var h = $element.outerHeight();
 
@@ -224,7 +227,7 @@
 	 *
 	 * @param {Array.<number>} box
 	 */
-	function computeOrigin(box) {
+	function compute_origin(box) {
 		return [box[0] + (box[2] / 2), box[1] + (box[3] / 2)];
 	}
 
@@ -431,7 +434,7 @@
 			se : se
 		};
 
-		var origin = computeOrigin(computeBoundingBox(
+		var origin = compute_origin(compute_bounding_box(
 			orientation.$element,
 			orientation.rotation
 		));
@@ -524,9 +527,9 @@
 	 */
 	function start_rotating($element, x, y) {
 		var rotation = get_element_rotation($element);
-		var bounding = computeBoundingBox($element, rotation);
+		var bounding = compute_bounding_box($element, rotation);
 		var anchor = [x, y];
-		var origin = computeOrigin(bounding);
+		var origin = compute_origin(bounding);
 		var angle = math.angular_direction(math.v_subtract(anchor, origin));
 
 		return {rotate: {
